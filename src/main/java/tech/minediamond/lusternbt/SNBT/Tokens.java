@@ -1,6 +1,9 @@
 package tech.minediamond.lusternbt.SNBT;
 
 final class Tokens {
+    private Tokens() {
+    }
+
     // Compounds
     static final char COMPOUND_BEGIN = '{';
     static final char COMPOUND_END = '}';
@@ -38,20 +41,13 @@ final class Tokens {
     static final String LITERAL_TRUE = "true";
     static final String LITERAL_FALSE = "false";
 
-    static final String NEWLINE = System.getProperty("line.separator", "\n");
+    static final char NEWLINE = '\n';
+    static final char CARRIAGE_RETURN = '\r';
     static final char SPACE = ' ';
     static final char TAB = '\t';
     static final char EOF = '\0';
 
-    /**
-     * Return if a character is a valid component in an identifier.
-     *
-     * <p>An identifier character must match the expression {@code [a-zA-Z0-9_+.-]}</p>
-     *
-     * @param c the character
-     * @return identifier
-     */
-    static boolean id(final char c) {
+    static boolean isAllowedInUnquotedString(final char c) {
         return (c >= 'a' && c <= 'z')
                 || (c >= 'A' && c <= 'Z')
                 || (c >= '0' && c <= '9')
@@ -61,11 +57,19 @@ final class Tokens {
 
     static boolean needQuotation(String s) {
         for (char c : s.toCharArray()) {
-            if (!id(c)) {
+            if (!isAllowedInUnquotedString(c)) {
                 return true;
             }
         }
         return false;
+    }
+
+    static boolean isNumber(final char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    static boolean isFormatChar(final char c) {
+        return c == TAB || c == SPACE || c == CARRIAGE_RETURN || c == EOF;
     }
 
     /**
@@ -77,7 +81,7 @@ final class Tokens {
     static boolean numericType(char c) {
         c = Character.toLowerCase(c);
         return c == TYPE_BYTE || c == TYPE_BYTE_UPPER
-                || c == TYPE_SHORT  || c == TYPE_SHORT_UPPER
+                || c == TYPE_SHORT || c == TYPE_SHORT_UPPER
                 || c == TYPE_INT || c == TYPE_INT_UPPER
                 || c == TYPE_LONG || c == TYPE_LONG_UPPER
                 || c == TYPE_FLOAT || c == TYPE_FLOAT_UPPER
