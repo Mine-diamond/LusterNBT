@@ -61,41 +61,9 @@ public class SNBTReader {
         System.out.println("current processed: " + fromStartToPosition(charBuffer));
     }
 
-    public void skipEmptyChar() {
-        char c;
-        while (charBuffer.hasRemaining()) {
-            c = this.charBuffer.get();
-            if (!Tokens.isFormatChar(c)) {
-                charBuffer.position(this.charBuffer.position() - 1);
-                return;
-            }
-        }
-    }
-
-    private char peek() {
-        return charBuffer.get(charBuffer.position());
-    }
-
-    private char peek(int offset) {
-        int target = charBuffer.position() + offset;
-        if (target >= charBuffer.limit()) {
-            throw new BufferUnderflowException();
-        }
-        return charBuffer.get(target);
-    }
-
-    private char consume() {
-        return charBuffer.get();
-    }
-
-    private void skip(int n) {
-        charBuffer.position(charBuffer.position() + n);
-    }
-
     private Tag parseTag(String name) {
         skipEmptyChar();
-        char c = peek();
-        return switch (c) {
+        return switch (peek()) {
             case Tokens.COMPOUND_BEGIN -> parseCompound(name);
             case Tokens.ARRAY_BEGIN -> parseArrayOrList(name);
             default -> parsePrimitive(name);
@@ -116,24 +84,24 @@ public class SNBTReader {
 
     private Tag parseCompound(String name) {
         CompoundTag compoundTag = new CompoundTag(name);
-        consume(); // `{`
+        skip(); // `{`
         if (peek() == Tokens.COMPOUND_END) {
-            consume(); // `}`
+            skip(); // `}`
             return compoundTag;
         }
 
         while (peek() != Tokens.COMPOUND_END) {
             String subName = parseString();
             skipEmptyChar(); // empty char between `"` and `:`
-            consume(); // `:`
+            skip(); // `:`
             compoundTag.put(parseTag(subName));
             if (peek() == Tokens.VALUE_SEPARATOR) {
-                consume(); // `,`
+                skip(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
 
-        consume(); // `}`
+        skip(); // `}`
         return compoundTag;
     }
 
@@ -151,7 +119,7 @@ public class SNBTReader {
         skip(3); // `[B;`
         skipEmptyChar(); // skip any possible empty char
         if (peek() == Tokens.ARRAY_END) {
-            consume(); // `]`
+            skip(); // `]`
             return byteArrayTag;
         }
         ArrayList<Byte> bytes = new ArrayList<>();
@@ -162,11 +130,11 @@ public class SNBTReader {
             }
             bytes.add(Byte.parseByte(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
-                consume(); // `,`
+                skip(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        consume(); // `]`
+        skip(); // `]`
         byte[] byteArray = new byte[bytes.size()];
         for (int i = 0; i < bytes.size(); i++) {
             byteArray[i] = bytes.get(i);
@@ -180,7 +148,7 @@ public class SNBTReader {
         skip(3); // `[I;`
         skipEmptyChar(); // skip any possible empty char
         if (peek() == Tokens.ARRAY_END) {
-            consume(); // `]`
+            skip(); // `]`
             return intArrayTag;
         }
         ArrayList<Integer> integers = new ArrayList<>();
@@ -191,11 +159,11 @@ public class SNBTReader {
             }
             integers.add(Integer.parseInt(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
-                consume(); // `,`
+                skip(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        consume(); // `]`
+        skip(); // `]`
         int[] intArray = new int[integers.size()];
         for (int i = 0; i < integers.size(); i++) {
             intArray[i] = integers.get(i);
@@ -208,7 +176,7 @@ public class SNBTReader {
         LongArrayTag longArrayTag = new LongArrayTag(name);
         skip(3); // `[L;`
         if (peek() == Tokens.ARRAY_END) {
-            consume(); // `]`
+            skip(); // `]`
             return longArrayTag;
         }
         ArrayList<Long> longs = new ArrayList<>();
@@ -219,11 +187,11 @@ public class SNBTReader {
             }
             longs.add(Long.parseLong(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
-                consume(); // `,`
+                skip(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        consume(); // `]`
+        skip(); // `]`
         long[] longArray = new long[longs.size()];
         for (int i = 0; i < longs.size(); i++) {
             longArray[i] = longs.get(i);
@@ -234,19 +202,19 @@ public class SNBTReader {
 
     private ListTag parseList(String name) {
         ListTag listTag = new ListTag(name);
-        consume(); //`[`
+        skip(); //`[`
         if (peek() == Tokens.ARRAY_END) {
-            consume(); // `]`
+            skip(); // `]`
             return listTag;
         }
         while (peek() != Tokens.ARRAY_END) {
             listTag.add(parseTag(""));
             if (peek() == Tokens.VALUE_SEPARATOR) {
-                consume(); // `,`
+                skip(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        consume(); // `]`
+        skip(); // `]`
         return listTag;
     }
 
@@ -349,5 +317,40 @@ public class SNBTReader {
             throw new RuntimeException("Expected an unquoted key but found none.");
         }
         return result;
+    }
+
+    private char peek() {
+        return charBuffer.get(charBuffer.position());
+    }
+
+    private char peek(int offset) {
+        int target = charBuffer.position() + offset;
+        if (target >= charBuffer.limit()) {
+            throw new BufferUnderflowException();
+        }
+        return charBuffer.get(target);
+    }
+
+    private char consume() {
+        return charBuffer.get();
+    }
+
+    private void skip() {
+        charBuffer.position(charBuffer.position() + 1);
+    }
+
+    private void skip(int n) {
+        charBuffer.position(charBuffer.position() + n);
+    }
+
+    public void skipEmptyChar() {
+        char c;
+        while (charBuffer.hasRemaining()) {
+            c = consume();
+            if (!Tokens.isFormatChar(c)) {
+                charBuffer.position(charBuffer.position() - 1);
+                return;
+            }
+        }
     }
 }
