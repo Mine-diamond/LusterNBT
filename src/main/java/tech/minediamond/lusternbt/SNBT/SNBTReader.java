@@ -13,39 +13,51 @@ public class SNBTReader {
     private final CharBuffer charBuffer;
     private final Tag tag;
 
+    private final StringBuilder reusableBuilder = new StringBuilder();
+
     public SNBTReader(String SNBTText) {
         this.charBuffer = CharBuffer.wrap(SNBTText);
         try {
             tag = parseTag("");
         } catch (Exception e) {
-            System.out.println("Error while parsing SNBTText: " + e);
-            printlnFromStartToPosition("Error while parsing SNBTText: ");
-            throw e;
+            if (charBuffer.position() >= 40) {
+                throw new SNBTParseException("Error while parsing SNBTText\n..." + charBuffer.subSequence(charBuffer.position() - 40, charBuffer.position()) + " <- here", e);
+            } else {
+                throw new SNBTParseException("Error while parsing SNBTText\n" + charBuffer.subSequence(0, charBuffer.position()) + " <- here", e);
+            }
         }
     }
 
     public SNBTReader(Path path) throws IOException {
         this.charBuffer = CharBuffer.wrap(Files.readString(path));
-        tag = parseTag("");
+        try {
+            tag = parseTag("");
+        } catch (Exception e) {
+            if (charBuffer.position() >= 40) {
+                throw new SNBTParseException("Error while parsing SNBTText\n..." + charBuffer.subSequence(charBuffer.position() - 40, charBuffer.position()) + " <- here", e);
+            } else {
+                throw new SNBTParseException("Error while parsing SNBTText\n" + charBuffer.subSequence(0, charBuffer.position()) + " <- here", e);
+            }
+        }
     }
 
     public Tag getTag() {
         return tag;
     }
 
-    static String fromStartToPosition(CharBuffer buf) {
-        int pos = buf.position();          // 当前指针
-        CharBuffer view = buf.duplicate(); // 共享内容，但 position/limit 独立
+    private static String fromStartToPosition(CharBuffer buf) { // for debug use
+        int pos = buf.position();
+        CharBuffer view = buf.duplicate();
         view.position(0);
         view.limit(pos);
-        return view.toString();            // toString() 输出 [position, limit)
+        return view.toString();
     }
 
-    void printlnFromStartToPosition(String msg) {
-        System.out.println("custom message: " + msg + ", current processed: " + fromStartToPosition(charBuffer));
+    private void printlnFromStartToPosition(String msg) { // for debug use
+        System.out.println("custom message: " + msg + "\ncurrent processed: " + fromStartToPosition(charBuffer));
     }
 
-    void printlnFromStartToPosition() {
+    private void printlnFromStartToPosition() { // for debug use
         System.out.println("current processed: " + fromStartToPosition(charBuffer));
     }
 
@@ -58,48 +70,26 @@ public class SNBTReader {
                 return;
             }
         }
-        throw new BufferUnderflowException();
     }
 
     private char peek() {
-        char c = charBuffer.get();
-        charBuffer.position(this.charBuffer.position() - 1);
-        return c;
+        return charBuffer.get(charBuffer.position());
     }
 
-    private char[] peek(int quantity) {
-        charBuffer.mark();
-        char[] cs = new char[quantity];
-        int i = 0;
-        char c;
-        while (charBuffer.hasRemaining()) {
-            c = this.charBuffer.get();
-            cs[i++] = c;
-            if (i == quantity) {
-                charBuffer.reset();
-                return cs;
-            }
+    private char peek(int offset) {
+        int target = charBuffer.position() + offset;
+        if (target >= charBuffer.limit()) {
+            throw new BufferUnderflowException();
         }
-        charBuffer.reset();
-        throw new BufferUnderflowException();
+        return charBuffer.get(target);
     }
 
     private char consume() {
         return charBuffer.get();
     }
 
-    private char[] consume(int quantity) {
-        char[] cs = new char[quantity];
-        int i = 0;
-        char c;
-        while (charBuffer.hasRemaining()) {
-            c = this.charBuffer.get();
-            cs[i++] = c;
-            if (i == quantity) {
-                return cs;
-            }
-        }
-        throw new BufferUnderflowException();
+    private void skip(int n) {
+        charBuffer.position(charBuffer.position() + n);
     }
 
     private Tag parseTag(String name) {
@@ -113,14 +103,12 @@ public class SNBTReader {
     }
 
     private Tag parseArrayOrList(String name) {
-        char[] first = peek(2);
-        if (first[1] == Tokens.ARRAY_END) {
-            consume(2); // `[]`
+        if (peek(1) == Tokens.ARRAY_END) {
+            skip(2); // `[]`
             return new ListTag(name);
         }
-        char[] peek = peek(3);
-        if (peek[2] == Tokens.ARRAY_SIGNATURE_SEPARATOR && "BIL".indexOf(peek[1]) != -1) {
-            return parseTypedArray(peek[1], name);
+        if (peek(2) == Tokens.ARRAY_SIGNATURE_SEPARATOR && "BIL".indexOf(peek(1)) != -1) {
+            return parseTypedArray(peek(1), name);
         } else {
             return parseList(name);
         }
@@ -160,7 +148,7 @@ public class SNBTReader {
 
     private ByteArrayTag parseByteArray(String name) {
         ByteArrayTag byteArrayTag = new ByteArrayTag(name);
-        consume(3); // `[B;`
+        skip(3); // `[B;`
         skipEmptyChar(); // skip any possible empty char
         if (peek() == Tokens.ARRAY_END) {
             consume(); // `]`
@@ -168,7 +156,10 @@ public class SNBTReader {
         }
         ArrayList<Byte> bytes = new ArrayList<>();
         while (peek() != Tokens.ARRAY_END) {
-            String value = parseNumber();
+            String value = parseUnquotedString();
+            if (value.endsWith("b") || value.endsWith("B")) {
+                value = value.substring(0, value.length() - 1);
+            }
             value = value.substring(0, value.length() - 1);
             bytes.add(Byte.parseByte(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
@@ -187,7 +178,7 @@ public class SNBTReader {
 
     private IntArrayTag parseIntArray(String name) {
         IntArrayTag intArrayTag = new IntArrayTag(name);
-        consume(3); // `[I;`
+        skip(3); // `[I;`
         skipEmptyChar(); // skip any possible empty char
         if (peek() == Tokens.ARRAY_END) {
             consume(); // `]`
@@ -195,7 +186,7 @@ public class SNBTReader {
         }
         ArrayList<Integer> integers = new ArrayList<>();
         while (peek() != Tokens.ARRAY_END) {
-            String value = parseNumber();
+            String value = parseUnquotedString();
             if (value.endsWith("i") || value.endsWith("I")) {
                 value = value.substring(0, value.length() - 1);
             }
@@ -216,14 +207,17 @@ public class SNBTReader {
 
     private LongArrayTag parseLongArray(String name) {
         LongArrayTag longArrayTag = new LongArrayTag(name);
-        consume(3); // `[L;`
+        skip(3); // `[L;`
         if (peek() == Tokens.ARRAY_END) {
             consume(); // `]`
             return longArrayTag;
         }
         ArrayList<Long> longs = new ArrayList<>();
         while (peek() != Tokens.ARRAY_END) {
-            String value = parseNumber();
+            String value = parseUnquotedString();
+            if (value.endsWith("l") || value.endsWith("L")) {
+                value = value.substring(0, value.length() - 1);
+            }
             value = value.substring(0, value.length() - 1);
             longs.add(Long.parseLong(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
@@ -240,7 +234,7 @@ public class SNBTReader {
         return longArrayTag;
     }
 
-    public ListTag parseList(String name) {
+    private ListTag parseList(String name) {
         ListTag listTag = new ListTag(name);
         consume(); //`[`
         if (peek() == Tokens.ARRAY_END) {
@@ -258,41 +252,44 @@ public class SNBTReader {
         return listTag;
     }
 
-    public Tag parsePrimitive(String name) {
+    private Tag parsePrimitive(String name) {
         skipEmptyChar();
         char firstChar = peek();
         if (firstChar == Tokens.DOUBLE_QUOTE || firstChar == Tokens.SINGLE_QUOTE) {
             return new StringTag(name, parseQuotedString());
         }
         String value = parseUnquotedString();
-        char suffix = Character.toLowerCase(value.charAt(value.length() - 1));
+
+        if (value.equalsIgnoreCase("true")) return new ByteTag(name, (byte) 1);
+        if (value.equalsIgnoreCase("false")) return new ByteTag(name, (byte) 0);
+
+        char lastChar = value.charAt(value.length() - 1);
+        char suffix = Character.toLowerCase(lastChar);
         try {
-            if (value.equals("true") || value.equals("false")) {
-                return new ByteTag(name, (byte) (value.equals("true") ? 1 : 0));
-            }
-            if (Tokens.isNumber(suffix)) {
-                try {
-                    return new IntTag(name, Integer.parseInt(value));
-                } catch (NumberFormatException e) {
+            if (Tokens.mayNumber(value)) {
+                if (value.contains(".") || value.toLowerCase().contains("e")) {
                     return new DoubleTag(name, Double.parseDouble(value));
+                } else {
+                    return new IntTag(name, Integer.parseInt(value));
                 }
             }
+
+            String numPart = value.substring(0, value.length() - 1);
             return switch (suffix) {
-                case Tokens.TYPE_BYTE -> new ByteTag(name, Byte.parseByte(value.substring(0, value.length() - 1)));
-                case Tokens.TYPE_SHORT -> new ShortTag(name, Short.parseShort(value.substring(0, value.length() - 1)));
-                case Tokens.TYPE_INT -> new IntTag(name, Integer.parseInt(value.substring(0, value.length() - 1)));
-                case Tokens.TYPE_LONG -> new LongTag(name, Long.parseLong(value.substring(0, value.length() - 1)));
-                case Tokens.TYPE_FLOAT -> new FloatTag(name, Float.parseFloat(value.substring(0, value.length() - 1)));
-                case Tokens.TYPE_DOUBLE ->
-                        new DoubleTag(name, Double.parseDouble(value.substring(0, value.length() - 1)));
-                default -> new StringTag(name, value); // So this is unquoted string
+                case Tokens.TYPE_BYTE -> new ByteTag(name, Byte.parseByte(numPart));
+                case Tokens.TYPE_SHORT -> new ShortTag(name, Short.parseShort(numPart));
+                case Tokens.TYPE_INT -> new IntTag(name, Integer.parseInt(numPart));
+                case Tokens.TYPE_LONG -> new LongTag(name, Long.parseLong(numPart));
+                case Tokens.TYPE_FLOAT -> new FloatTag(name, Float.parseFloat(numPart));
+                case Tokens.TYPE_DOUBLE -> new DoubleTag(name, Double.parseDouble(numPart));
+                default -> new StringTag(name, value); // Unquoted string
             };
         } catch (NumberFormatException e) {
             return new StringTag(name, value); // So this is unquoted string
         }
     }
 
-    public String parseString() {
+    private String parseString() {
         skipEmptyChar();
         char firstChar = peek();
 
@@ -303,70 +300,56 @@ public class SNBTReader {
         }
     }
 
-    public String parseQuotedString() {
+    private String parseQuotedString() {
         skipEmptyChar();
-        boolean isDoubleQuote = consume() == Tokens.DOUBLE_QUOTE; // `"` or `'`
-        StringBuilder sb = new StringBuilder();
-        boolean escaped = false;
+        char quoteChar = consume(); // `"` or `'`
+        reusableBuilder.setLength(0);
 
         while (charBuffer.hasRemaining()) {
-            char c = charBuffer.get();
-            if (escaped) {
-                if ((isDoubleQuote && c == Tokens.DOUBLE_QUOTE) || (!isDoubleQuote && c == Tokens.SINGLE_QUOTE)) {
-                    sb.append(c);
-                    escaped = false;
-                    continue;
+            char c = consume();
+
+            if (c == Tokens.ESCAPE_MARKER) {
+                if (!charBuffer.hasRemaining()) {
+                    throw new RuntimeException("Unexpected end of SNBT: trailing backslash");
                 }
-                sb.append(Tokens.ESCAPE_MARKER).append(c);
-                escaped = false;
-            } else if (c == Tokens.ESCAPE_MARKER) { // '\'
-                escaped = true;
-            } else if ((isDoubleQuote && c == Tokens.DOUBLE_QUOTE) || (!isDoubleQuote && c == Tokens.SINGLE_QUOTE)) {
-                return sb.toString();
+                char next = consume();
+
+                switch (next) {
+                    case 'n' -> reusableBuilder.append('\n');
+                    case 't' -> reusableBuilder.append('\t');
+                    case 'r' -> reusableBuilder.append('\r');
+                    case '\\' -> reusableBuilder.append('\\');
+                    case '"' -> reusableBuilder.append('"');
+                    case '\'' -> reusableBuilder.append('\'');
+                    default -> reusableBuilder.append(next);
+                }
+            } else if (c == quoteChar) {
+                return reusableBuilder.toString();
             } else {
-                sb.append(c);
+                reusableBuilder.append(c);
             }
         }
 
         throw new RuntimeException("Unclosed quoted string");
     }
 
-    public String parseUnquotedString() {
-        StringBuilder sb = new StringBuilder();
+    private String parseUnquotedString() {
+        skipEmptyChar();
+        reusableBuilder.setLength(0);
         while (charBuffer.hasRemaining()) {
-            skipEmptyChar();
             char c = charBuffer.get();
             if (Tokens.isAllowedInUnquotedString(c)) {
-                sb.append(c);
+                reusableBuilder.append(c);
             } else {
                 charBuffer.position(charBuffer.position() - 1);
                 break;
             }
         }
 
-        String result = sb.toString();
+        String result = reusableBuilder.toString();
         if (result.isEmpty()) {
             throw new RuntimeException("Expected an unquoted key but found none.");
         }
         return result;
-    }
-
-    public String parseNumber() {
-        StringBuilder sb = new StringBuilder();
-        while (charBuffer.hasRemaining()) {
-            char c = charBuffer.get();
-            if (Tokens.isNumber(c)) {
-                sb.append(c);
-            } else if (Tokens.numericType(c)) {
-                sb.append(c);
-                return sb.toString();
-            } else if (Tokens.isFormatChar(c)) {
-                continue;
-            } else {
-                charBuffer.position(charBuffer.position() - 1);
-                return sb.toString();
-            }
-        }
-        throw new RuntimeException("Expected an number but found none."); // 这个异常该怎么写？
     }
 }

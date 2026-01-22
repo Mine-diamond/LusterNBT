@@ -64,8 +64,18 @@ final class Tokens {
         return false;
     }
 
-    static boolean isNumber(final char c) {
+    static boolean isDigit(final char c) {
         return c >= '0' && c <= '9';
+    }
+
+    static boolean mayNumber(String s) {
+        if (s == null || s.isEmpty()) return false;
+        for (char c : s.toCharArray()) {
+            if (!isDigit(c) && c != '.' && c != '-' && c != 'e' && c != '+') {
+                return false;
+            }
+        }
+        return true;
     }
 
     static boolean isFormatChar(final char c) {
