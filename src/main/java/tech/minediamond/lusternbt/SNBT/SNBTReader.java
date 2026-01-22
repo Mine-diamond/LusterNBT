@@ -1,5 +1,8 @@
 package tech.minediamond.lusternbt.SNBT;
 
+import tech.minediamond.lusternbt.arraylist.ByteArrayList;
+import tech.minediamond.lusternbt.arraylist.IntArrayList;
+import tech.minediamond.lusternbt.arraylist.LongArrayList;
 import tech.minediamond.lusternbt.tag.builtin.*;
 
 import java.io.IOException;
@@ -7,13 +10,15 @@ import java.nio.BufferUnderflowException;
 import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 
 public class SNBTReader {
     private final CharBuffer charBuffer;
     private final Tag tag;
 
     private final StringBuilder reusableBuilder = new StringBuilder();
+    ByteArrayList reuseableByteArrayList = new ByteArrayList();
+    IntArrayList reuseableIntArrayList = new IntArrayList();
+    LongArrayList reuseableLongArrayList = new LongArrayList();
 
     public SNBTReader(String SNBTText) {
         this.charBuffer = CharBuffer.wrap(SNBTText);
@@ -154,24 +159,20 @@ public class SNBTReader {
             consume(); // `]`
             return byteArrayTag;
         }
-        ArrayList<Byte> bytes = new ArrayList<>();
+        reuseableByteArrayList.clear();
         while (peek() != Tokens.ARRAY_END) {
             String value = parseUnquotedString();
             if (value.endsWith("b") || value.endsWith("B")) {
                 value = value.substring(0, value.length() - 1);
             }
-            bytes.add(Byte.parseByte(value));
+            reuseableByteArrayList.add(Byte.parseByte(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
                 consume(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
         consume(); // `]`
-        byte[] byteArray = new byte[bytes.size()];
-        for (int i = 0; i < bytes.size(); i++) {
-            byteArray[i] = bytes.get(i);
-        }
-        byteArrayTag.setValue(byteArray);
+        byteArrayTag.setValue(reuseableByteArrayList.getBytesArray());
         return byteArrayTag;
     }
 
@@ -183,24 +184,20 @@ public class SNBTReader {
             consume(); // `]`
             return intArrayTag;
         }
-        ArrayList<Integer> integers = new ArrayList<>();
+        reuseableIntArrayList.clear();
         while (peek() != Tokens.ARRAY_END) {
             String value = parseUnquotedString();
             if (value.endsWith("i") || value.endsWith("I")) {
                 value = value.substring(0, value.length() - 1);
             }
-            integers.add(Integer.parseInt(value));
+            reuseableIntArrayList.add(Integer.parseInt(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
                 consume(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
         consume(); // `]`
-        int[] intArray = new int[integers.size()];
-        for (int i = 0; i < integers.size(); i++) {
-            intArray[i] = integers.get(i);
-        }
-        intArrayTag.setValue(intArray);
+        intArrayTag.setValue(reuseableIntArrayList.getIntArray());
         return intArrayTag;
     }
 
@@ -211,24 +208,20 @@ public class SNBTReader {
             consume(); // `]`
             return longArrayTag;
         }
-        ArrayList<Long> longs = new ArrayList<>();
+        reuseableLongArrayList.clear();
         while (peek() != Tokens.ARRAY_END) {
             String value = parseUnquotedString();
             if (value.endsWith("l") || value.endsWith("L")) {
                 value = value.substring(0, value.length() - 1);
             }
-            longs.add(Long.parseLong(value));
+            reuseableLongArrayList.add(Long.parseLong(value));
             if (peek() == Tokens.VALUE_SEPARATOR) {
                 consume(); // `,`
             }
             skipEmptyChar(); // skip empty char after `,` or something possible
         }
         consume(); // `]`
-        long[] longArray = new long[longs.size()];
-        for (int i = 0; i < longs.size(); i++) {
-            longArray[i] = longs.get(i);
-        }
-        longArrayTag.setValue(longArray);
+        longArrayTag.setValue(reuseableLongArrayList.getLongArray());
         return longArrayTag;
     }
 

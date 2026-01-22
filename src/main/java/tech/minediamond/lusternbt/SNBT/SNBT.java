@@ -1,6 +1,5 @@
 package tech.minediamond.lusternbt.SNBT;
 
-import tech.minediamond.lusternbt.SNBTIO;
 import tech.minediamond.lusternbt.tag.builtin.Tag;
 
 import java.io.IOException;
@@ -18,7 +17,11 @@ public class SNBT {
         new SNBTWriter(tag, linebreak).writeSNBT(path);
     }
 
-    public static Tag deserialize(String s) {
-        return null;
+    public static Tag deserialize(String SNBTText) {
+        return new SNBTReader(SNBTText).getTag();
+    }
+
+    public static Tag readSNBT(Path path) throws IOException {
+        return new SNBTReader(path).getTag();
     }
 }
