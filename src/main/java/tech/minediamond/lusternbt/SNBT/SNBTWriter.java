@@ -69,48 +69,30 @@ public class SNBTWriter {
     }
 
     private void stringifyCompoundTag(CompoundTag compoundTag) {
-        if (snbtStyle == SNBTStyle.INDENTED) {
-            stringifyCompoundTagIfLineBreak(compoundTag);
-        } else {
-            stringifyCompoundTagIfNotLineBreak(compoundTag);
-        }
-    }
-
-    private void stringifyCompoundTagIfLineBreak(CompoundTag compoundTag) {
         builder.append(Tokens.COMPOUND_BEGIN);
-        if (!compoundTag.isEmpty()) {
+        boolean isFirst = true;
+        if (snbtStyle == SNBTStyle.INDENTED) {
             depth++;
-            boolean isFirst = true;
-            for (Tag subTag : compoundTag) {
-                if (!isFirst) {
-                    builder.append(Tokens.VALUE_SEPARATOR);
-                } else {
-                    isFirst = false;
-                }
-                newLineAndAddTab();
-                stringifyCompoundItem(subTag);
-            }
-            depth--;
             newLineAndAddTab();
         }
-        builder.append(Tokens.COMPOUND_END);
-    }
-
-    private void stringifyCompoundTagIfNotLineBreak(CompoundTag compoundTag) {
-        builder.append(Tokens.COMPOUND_BEGIN);
-        if (!compoundTag.isEmpty()) {
-            boolean isFirst = true;
-            for (Tag subTag : compoundTag) {
-                if (!isFirst) {
-                    builder.append(Tokens.VALUE_SEPARATOR);
-                    if (snbtStyle == SNBTStyle.SPACED) {
-                        builder.append(Tokens.SPACE);
+        for (Tag subTag : compoundTag) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                switch (snbtStyle) {
+                    case COMPACT -> builder.append(Tokens.VALUE_SEPARATOR);
+                    case SPACED -> builder.append(Tokens.VALUE_SEPARATOR).append(Tokens.SPACE);
+                    case INDENTED -> {
+                        builder.append(Tokens.VALUE_SEPARATOR);
+                        newLineAndAddTab();
                     }
-                } else {
-                    isFirst = false;
                 }
-                stringifyCompoundItem(subTag);
             }
+            stringifyCompoundItem(subTag);
+        }
+        if (snbtStyle == SNBTStyle.INDENTED) {
+            depth--;
+            newLineAndAddTab();
         }
         builder.append(Tokens.COMPOUND_END);
     }
@@ -132,48 +114,31 @@ public class SNBTWriter {
     }
 
     private void stringifyListTag(ListTag listTag) {
-        if (snbtStyle == SNBTStyle.INDENTED) {
-            stringifyListTagIfLineBreak(listTag);
-        } else {
-            stringifyListTagIfNotLineBreak(listTag);
-        }
-    }
-
-    private void stringifyListTagIfLineBreak(ListTag listTag) {
         builder.append(Tokens.ARRAY_BEGIN);
-        if (listTag.size() != 0) {
+        boolean isFirst = true;
+        if (snbtStyle == SNBTStyle.INDENTED) {
             depth++;
-            boolean isFirst = true;
-            for (Tag subTag : listTag) {
-                if (!isFirst) {
-                    builder.append(Tokens.VALUE_SEPARATOR);
-                } else {
-                    isFirst = false;
-                }
-                newLineAndAddTab();
-                stringify(subTag);
-            }
-            depth--;
             newLineAndAddTab();
         }
-        builder.append(Tokens.ARRAY_END);
-    }
-
-    private void stringifyListTagIfNotLineBreak(ListTag listTag) {
-        builder.append(Tokens.ARRAY_BEGIN);
-        if (listTag.size() != 0) {
-            boolean isFirst = true;
-            for (Tag subTag : listTag) {
-                if (!isFirst) {
-                    builder.append(Tokens.VALUE_SEPARATOR);
-                    if (snbtStyle == SNBTStyle.SPACED) {
-                        builder.append(Tokens.SPACE);
+        for (Tag subTag : listTag) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                switch (snbtStyle) {
+                    case COMPACT -> builder.append(Tokens.VALUE_SEPARATOR);
+                    case SPACED -> builder.append(Tokens.VALUE_SEPARATOR).append(Tokens.SPACE);
+                    case INDENTED -> {
+                        builder.append(Tokens.VALUE_SEPARATOR);
+                        newLineAndAddTab();
                     }
-                } else {
-                    isFirst = false;
                 }
-                stringify(subTag);
             }
+
+            stringify(subTag);
+        }
+        if (snbtStyle == SNBTStyle.INDENTED) {
+            depth--;
+            newLineAndAddTab();
         }
         builder.append(Tokens.ARRAY_END);
     }
@@ -240,10 +205,9 @@ public class SNBTWriter {
     }
 
     private void addTab() {
-        int i = 0;
-        while (i < depth) {
+        //noinspection StringRepeatCanBeUsed
+        for (int i = 0;i < depth ; i++) {
             builder.append(Tokens.TAB);
-            i++;
         }
     }
 
