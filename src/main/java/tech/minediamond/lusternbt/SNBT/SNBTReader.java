@@ -239,13 +239,14 @@ public class SNBTReader {
 
     private Tag parsePrimitive(String name) {
         skipEmptyChar();
-        if (!Tokens.isDigit(peek())) {
-            return new StringTag(name, parseString());
-        }
 
-        String value = parseUnquotedString();
-        if (value.equals("true")) return new ByteTag(name, (byte) 1);
-        if (value.equals("false")) return new ByteTag(name, (byte) 0);
+        String value = parseString();
+        if (value.equalsIgnoreCase("true")) return new ByteTag(name, (byte) 1);
+        if (value.equalsIgnoreCase("false")) return new ByteTag(name, (byte) 0);
+
+        if (value.isEmpty() || !Tokens.isDigit(value.charAt(0))) {
+            return new StringTag(name, value);
+        }
 
         char lastChar = value.charAt(value.length() - 1);
         char suffix = Character.toLowerCase(lastChar);
