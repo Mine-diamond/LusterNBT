@@ -227,9 +227,11 @@ public class SNBTWriter {
         for (int i = 0; i < len; i++) {
             char c = input.charAt(i);
             switch (c) {
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
                 case '\n' -> sb.append("\\n");
-                case '\t' -> sb.append("\\t");
                 case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
                 case '\\' -> sb.append("\\\\");
                 case '"' -> sb.append("\\\"");
                 default -> sb.append(c);

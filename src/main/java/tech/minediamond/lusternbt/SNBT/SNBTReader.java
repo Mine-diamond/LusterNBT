@@ -152,11 +152,7 @@ public class SNBTReader {
         }
         ArrayList<Byte> bytes = new ArrayList<>();
         while (peek() != Tokens.ARRAY_END) {
-            String value = parseUnquotedString();
-            if (value.endsWith("b") || value.endsWith("B")) {
-                value = value.substring(0, value.length() - 1);
-            }
-            bytes.add(Byte.parseByte(value));
+            bytes.add((byte) parseArrayNumber(parseUnquotedString(), Byte.MIN_VALUE, Byte.MAX_VALUE, 0, 256, 1));
             if (peek() == Tokens.VALUE_SEPARATOR) {
                 skip(); // `,`
             }
@@ -181,11 +177,7 @@ public class SNBTReader {
         }
         ArrayList<Integer> integers = new ArrayList<>();
         while (peek() != Tokens.ARRAY_END) {
-            String value = parseUnquotedString();
-            if (value.endsWith("i") || value.endsWith("I")) {
-                value = value.substring(0, value.length() - 1);
-            }
-            integers.add(Integer.parseInt(value));
+            integers.add((int) parseArrayNumber(parseUnquotedString(), Integer.MIN_VALUE, Integer.MAX_VALUE, 0, Integer.MAX_VALUE * 2L, 0));
             if (peek() == Tokens.VALUE_SEPARATOR) {
                 skip(); // `,`
             }
@@ -209,11 +201,7 @@ public class SNBTReader {
         }
         ArrayList<Long> longs = new ArrayList<>();
         while (peek() != Tokens.ARRAY_END) {
-            String value = parseUnquotedString();
-            if (value.endsWith("l") || value.endsWith("L")) {
-                value = value.substring(0, value.length() - 1);
-            }
-            longs.add(Long.parseLong(value));
+            longs.add(parseArrayNumber(parseUnquotedString(), Long.MIN_VALUE, Long.MAX_VALUE, 0, Long.MAX_VALUE, 1));
             if (peek() == Tokens.VALUE_SEPARATOR) {
                 skip(); // `,`
             }
@@ -251,18 +239,38 @@ public class SNBTReader {
 
     private Tag parsePrimitive(String name) {
         skipEmptyChar();
-        char firstChar = peek();
-        if (firstChar == Tokens.DOUBLE_QUOTE || firstChar == Tokens.SINGLE_QUOTE) {
-            return new StringTag(name, parseQuotedString());
+        if (!Tokens.isDigit(peek())) {
+            return new StringTag(name, parseString());
         }
-        String value = parseUnquotedString();
 
-        if (value.equalsIgnoreCase("true")) return new ByteTag(name, (byte) 1);
-        if (value.equalsIgnoreCase("false")) return new ByteTag(name, (byte) 0);
+        String value = parseUnquotedString();
+        if (value.equals("true")) return new ByteTag(name, (byte) 1);
+        if (value.equals("false")) return new ByteTag(name, (byte) 0);
 
         char lastChar = value.charAt(value.length() - 1);
         char suffix = Character.toLowerCase(lastChar);
+
+        boolean isSignedDefault = true;
+        boolean isSigned = false;
+        int radix = 10;
+
         try {
+            if (value.startsWith("0x") || value.startsWith("0X")) radix = 16;
+            if ((value.startsWith("0b") || value.startsWith("0B")) && value.length() >= 4) radix = 2;
+
+            try {
+                char lastChar2 = value.charAt(value.length() - 2);
+                if (lastChar2 == 'u' || lastChar2 == 'U') {
+                    isSignedDefault = false;
+                    isSigned = false;
+                }
+                if (lastChar2 == 's' || lastChar2 == 'S') {
+                    isSignedDefault = false;
+                    isSigned = true;
+                }
+            } catch (Exception ignored) {
+            }
+
             if (Tokens.mayNumber(value)) {
                 if (value.contains(".") || value.toLowerCase().contains("e")) {
                     return new DoubleTag(name, Double.parseDouble(value));
@@ -270,20 +278,75 @@ public class SNBTReader {
                     return new IntTag(name, Integer.parseInt(value));
                 }
             }
+            String numPart;
+            // Since the symbol suffix must be at the second-to-last character,
+            // once isSignedDefault is false, there must be a two-character suffix;
+            // otherwise, it is a one-character suffix.
+            if (isSignedDefault) {
 
-            String numPart = value.substring(0, value.length() - 1);
-            return switch (suffix) {
-                case Tokens.TYPE_BYTE -> new ByteTag(name, Byte.parseByte(numPart));
-                case Tokens.TYPE_SHORT -> new ShortTag(name, Short.parseShort(numPart));
-                case Tokens.TYPE_INT -> new IntTag(name, Integer.parseInt(numPart));
-                case Tokens.TYPE_LONG -> new LongTag(name, Long.parseLong(numPart));
-                case Tokens.TYPE_FLOAT -> new FloatTag(name, Float.parseFloat(numPart));
-                case Tokens.TYPE_DOUBLE -> new DoubleTag(name, Double.parseDouble(numPart));
-                default -> new StringTag(name, value); // Unquoted string
-            };
+                if (radix == 16 || radix == 2) {
+                    numPart = value.substring(2, value.length() - 1);
+                    return getUnSignedTag(name, value, suffix, radix, numPart);
+                } else {
+                    numPart = value.substring(0, value.length() - 1);
+                    return getSignedTag(name, value, suffix, radix, numPart);
+                }
+
+            } else {
+
+                if (radix == 16 || radix == 2) {
+                    numPart = value.substring(2, value.length() - 2);
+                } else {
+                    numPart = value.substring(0, value.length() - 2);
+                }
+
+                if (isSigned) {
+                    return getSignedTag(name, value, suffix, radix, numPart);
+                } else {
+                    return getUnSignedTag(name, value, suffix, radix, numPart);
+                }
+            }
+
         } catch (NumberFormatException e) {
+            if (e.getMessage().contains("Value out of range.")) {
+                throw e;
+            }
+            System.out.println(e.getMessage());
             return new StringTag(name, value); // So this is unquoted string
         }
+    }
+
+    private Tag getSignedTag(String name, String value, char suffix, int radix, String numPart) {
+        return switch (suffix) {
+            case Tokens.TYPE_BYTE -> new ByteTag(name, Byte.parseByte(numPart, radix));
+            case Tokens.TYPE_SHORT -> new ShortTag(name, Short.parseShort(numPart, radix));
+            case Tokens.TYPE_INT -> new IntTag(name, Integer.parseInt(numPart, radix));
+            case Tokens.TYPE_LONG -> new LongTag(name, Long.parseLong(numPart, radix));
+            case Tokens.TYPE_FLOAT -> new FloatTag(name, Float.parseFloat(numPart));
+            case Tokens.TYPE_DOUBLE -> new DoubleTag(name, Double.parseDouble(numPart));
+            default -> new StringTag(name, value); // Unquoted string
+        };
+    }
+
+    private Tag getUnSignedTag(String name, String value, char suffix, int radix, String numPart) {
+        return switch (suffix) {
+            case Tokens.TYPE_BYTE -> {
+                System.out.println("numPart: " + numPart + ", radix: " + radix);
+                int b = Integer.parseInt(numPart, radix);
+                if (b >= 256 || b <= -1)
+                    throw new NumberFormatException("Value out of range. Value:\"" + value + "\"" + " Radix:" + radix);
+                yield new ByteTag(name, (byte) b);
+            }
+            case Tokens.TYPE_SHORT -> {
+                int s = Integer.parseInt(numPart, radix);
+                if (s >= 65535 || s < -1)
+                    throw new NumberFormatException("Value out of range. Value:\"" + value + "\"" + " Radix:" + radix);
+                yield new ShortTag(name, (short) s);
+            }
+            case Tokens.TYPE_INT -> new IntTag(name, Integer.parseUnsignedInt(numPart, radix));
+            case Tokens.TYPE_LONG -> new LongTag(name, Long.parseUnsignedLong(numPart, radix));
+            default -> new StringTag(name, value); // Unquoted string
+        };
     }
 
     private String parseString() {
@@ -347,6 +410,66 @@ public class SNBTReader {
         if (result.isEmpty()) {
             throw new RuntimeException("Expected an unquoted key but found none.");
         }
+        return result;
+    }
+
+    private long parseArrayNumber(String value, long min, long max, long unSignedMin, long unSignedMax, int defaultSuffixNum) {
+        boolean isSignedDefault = true;
+        boolean isSigned = false;
+        int radix = 10;
+        int prefixNum = 0;
+        int suffixNum = defaultSuffixNum;
+
+        String lowerValue = value.toLowerCase();
+        if (lowerValue.startsWith("0x")) {
+            prefixNum = 2;
+            radix = 16;
+        } else if (lowerValue.startsWith("0b")) {
+            // Special handling for byte tags as 0b is a valid byte tag
+            if (max > 255 || value.length() > 4) {
+                prefixNum = 2;
+                radix = 2;
+            }
+        }
+
+        int len = value.length();
+        if (len > 0 && lowerValue.endsWith("i")) { //Special handling for int tags
+            suffixNum = 1;
+        }
+
+        try {
+            if (len >= 2) {
+                char signChar = Character.toLowerCase(value.charAt(len - 2));
+                if (signChar == 'u') {
+                    suffixNum = 2;
+                    isSignedDefault = false;
+                    isSigned = false;
+                } else if (signChar == 's') {
+                    suffixNum = 2;
+                    isSignedDefault = false;
+                    isSigned = true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (isSignedDefault) {
+            isSigned = radix != 16 && radix != 2;
+        }
+
+        String numPart = value.substring(prefixNum, len - suffixNum);
+        long result = isSigned ? Long.parseLong(numPart, radix) : Long.parseUnsignedLong(numPart, radix);
+
+        if (isSigned) {
+            if (result < min || result > max) {
+                throw new NumberFormatException("Value out of range. Value:\"" + value + "\" Radix:" + radix);
+            }
+        } else {
+            if (result < unSignedMin || result > unSignedMax) {
+                throw new NumberFormatException("Value out of range. Value:\"" + value + "\" Radix:" + radix);
+            }
+        }
+
         return result;
     }
 

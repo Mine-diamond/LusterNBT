@@ -65,7 +65,7 @@ final class Tokens {
     }
 
     static boolean isDigit(final char c) {
-        return c >= '0' && c <= '9';
+        return (c >= '0' && c <= '9') || c == '-' || c == '.';
     }
 
     static boolean mayNumber(String s) {
