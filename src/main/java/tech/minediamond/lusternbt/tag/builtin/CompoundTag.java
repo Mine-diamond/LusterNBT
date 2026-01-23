@@ -84,6 +84,7 @@ public class CompoundTag extends Tag implements Iterable<Tag> {
      *
      * @param tag Tag to put into this compound tag.
      * @return The previous tag associated with its name, or null if there wasn't one.
+     * The returned tag may be of a different type than the one being put.
      */
     public Tag put(Tag tag) {
         return this.value.put(tag.getName(), tag);
