@@ -1,12 +1,12 @@
 package tech.minediamond.lusternbt.tag.builtin;
 
-import java.io.*;
-import java.lang.reflect.Array;
-import java.nio.charset.StandardCharsets;
+import tech.minediamond.lusternbt.SNBT.SNBTStyle;
+import tech.minediamond.lusternbt.SNBT.SNBT;
 
-import tech.minediamond.lusternbt.SNBTIO;
-import tech.minediamond.lusternbt.SNBTIO.StringifiedNBTReader;
-import tech.minediamond.lusternbt.SNBTIO.StringifiedNBTWriter;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.Array;
 
 /**
  * Represents an NBT tag.
@@ -57,49 +57,48 @@ public abstract class Tag implements Cloneable {
      * @throws java.io.IOException If an I/O error occurs.
      */
     public abstract void write(DataOutput out) throws IOException;
-    
+
     /**
      * Parses this tag from stringified NBT.
      *
      * @param in String to parse.
      */
-    public abstract void destringify(StringifiedNBTReader in) throws IOException;
+    //public abstract void destringify(StringifiedNBTReader in) throws IOException;
 
     /**
      * Write this tag as stringified NBT.
      */
-    public abstract void stringify(StringifiedNBTWriter out, boolean linebreak, int depth) throws IOException;
-
+    //public abstract void stringify(StringifiedNBTWriter out, boolean linebreak, int depth) throws IOException;
     @Override
     public abstract Tag clone();
 
     @Override
     public boolean equals(Object obj) {
-        if(!(obj instanceof Tag)) {
+        if (!(obj instanceof Tag)) {
             return false;
         }
 
         Tag tag = (Tag) obj;
-        if(!this.getName().equals(tag.getName())) {
+        if (!this.getName().equals(tag.getName())) {
             return false;
         }
 
-        if(this.getValue() == null) {
+        if (this.getValue() == null) {
             return tag.getValue() == null;
-        } else if(tag.getValue() == null) {
+        } else if (tag.getValue() == null) {
             return false;
         }
 
-        if(this.getValue().getClass().isArray() && tag.getValue().getClass().isArray()) {
+        if (this.getValue().getClass().isArray() && tag.getValue().getClass().isArray()) {
             int length = Array.getLength(this.getValue());
-            if(Array.getLength(tag.getValue()) != length) {
+            if (Array.getLength(tag.getValue()) != length) {
                 return false;
             }
 
-            for(int index = 0; index < length; index++) {
+            for (int index = 0; index < length; index++) {
                 Object o = Array.get(this.getValue(), index);
                 Object other = Array.get(tag.getValue(), index);
-                if(o == null && other != null || o != null && !o.equals(other)) {
+                if (o == null && other != null || o != null && !o.equals(other)) {
                     return false;
                 }
             }
@@ -114,13 +113,13 @@ public abstract class Tag implements Cloneable {
     public String toString() {
         String name = this.getName() != null && !this.getName().equals("") ? "(" + this.getName() + ")" : "";
         String value = "";
-        if(this.getValue() != null) {
+        if (this.getValue() != null) {
             value = this.getValue().toString();
-            if(this.getValue().getClass().isArray()) {
+            if (this.getValue().getClass().isArray()) {
                 StringBuilder build = new StringBuilder();
                 build.append("[");
-                for(int index = 0; index < Array.getLength(this.getValue()); index++) {
-                    if(index > 0) {
+                for (int index = 0; index < Array.getLength(this.getValue()); index++) {
+                    if (index > 0) {
                         build.append(", ");
                     }
 
@@ -135,9 +134,7 @@ public abstract class Tag implements Cloneable {
         return this.getClass().getSimpleName() + name + " { " + value + " }";
     }
 
-    public String toSNBTString(boolean linebreak) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        SNBTIO.writeTag(out, this, linebreak);
-        return out.toString(StandardCharsets.UTF_8);
+    public String toSNBTString(boolean stringifyRootTagName, SNBTStyle snbtStyle) {
+        return SNBT.serialize(this, stringifyRootTagName, snbtStyle);
     }
 }
