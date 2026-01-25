@@ -1,7 +1,7 @@
 package tech.minediamond.micanbt;
 
 import tech.minediamond.micanbt.tag.TagCreateException;
-import tech.minediamond.micanbt.tag.TagRegistry;
+import tech.minediamond.micanbt.tag.TagFactory;
 import tech.minediamond.micanbt.tag.builtin.CompoundTag;
 import tech.minediamond.micanbt.tag.builtin.Tag;
 
@@ -192,7 +192,7 @@ public class NBTIO {
         Tag tag;
 
         try {
-            tag = TagRegistry.createInstance(id, name);
+            tag = TagFactory.createInstance(id, name);
         } catch(TagCreateException e) {
             throw new IOException("Failed to create tag.", e);
         }
@@ -240,7 +240,7 @@ public class NBTIO {
         Tag tag;
 
         try {
-            tag = TagRegistry.createInstance(id, "");
+            tag = TagFactory.createInstance(id, "");
         } catch(TagCreateException e) {
             throw new IOException("Failed to create tag.", e);
         }
@@ -281,7 +281,7 @@ public class NBTIO {
      */
     public static void writeTag(DataOutput out, Tag tag) throws IOException {
         if(tag != null) {
-            out.writeByte(TagRegistry.getIdFor(tag.getClass()));
+            out.writeByte(tag.getTagId());
             out.writeUTF(tag.getName());
             tag.write(out);
         } else {
@@ -314,7 +314,7 @@ public class NBTIO {
 
     public static void writeAnyTag(DataOutput out, Tag tag) throws IOException {
         if (tag != null) {
-            out.writeByte(TagRegistry.getIdFor(tag.getClass()));
+            out.writeByte(tag.getTagId());
             tag.write(out);
         } else {
             out.writeByte(0);

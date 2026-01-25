@@ -1,7 +1,7 @@
 package tech.minediamond.micanbt.tag.builtin;
 
 import tech.minediamond.micanbt.tag.TagCreateException;
-import tech.minediamond.micanbt.tag.TagRegistry;
+import tech.minediamond.micanbt.tag.TagFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -161,7 +161,7 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
         for (int index = 0; index < count; index++) {
 
             try {
-                Tag tag = TagRegistry.createInstance(this.typeId, "");
+                Tag tag = TagFactory.createInstance(this.typeId, "");
                 tag.read(in);
                 this.value.add((T) tag);
             } catch (TagCreateException e) {
