@@ -4,18 +4,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>tech.minediamond</groupId>
-    <artifactId>lusternbt</artifactId>
+    <artifactId>micanbt</artifactId>
     <version>0.1.0</version>
     <packaging>jar</packaging>
 
-    <name>lusternbt</name>
+    <name>MicaNBT</name>
     <description>A library for reading and writing NBT files, written in Java.</description>
-    <url>https://github.com/Mine-diamond/LusterNBT/</url>
+    <url>https://github.com/Mine-diamond/MicaNBT/</url>
 
     <scm>
-        <connection>scm:git:git@github.com:Mine-diamond/LusterNBT.git</connection>
-        <developerConnection>scm:git:ssh@github.com:Mine-diamond/LusterNBT.git</developerConnection>
-        <url>https://github.com/Mine-diamond/LusterNBT/</url>
+        <connection>scm:git:git@github.com:Mine-diamond/MicaNBT.git</connection>
+        <developerConnection>scm:git:ssh@github.com:Mine-diamond/MicaNBT.git</developerConnection>
+        <url>https://github.com/Mine-diamond/MicaNBT/</url>
     </scm>
 
     <properties>
