@@ -198,4 +198,9 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
         }
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + this.typeId + this.value.hashCode();
+    }
 }

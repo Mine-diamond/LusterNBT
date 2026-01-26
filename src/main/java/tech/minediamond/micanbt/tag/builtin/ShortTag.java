@@ -69,4 +69,9 @@ public class ShortTag extends Tag {
     public boolean equals(Object o) {
         return super.equals(o) && value == ((ShortTag) o).value;
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + Short.hashCode(value);
+    }
 }

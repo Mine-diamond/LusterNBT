@@ -69,4 +69,9 @@ public class IntTag extends Tag {
     public boolean equals(Object o) {
         return super.equals(o) && value == ((IntTag) o).value;
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + this.value;
+    }
 }

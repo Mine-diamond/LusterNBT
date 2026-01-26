@@ -70,4 +70,9 @@ public class StringTag extends Tag {
     public boolean equals(Object o) {
         return super.equals(o) && Objects.equals(value, ((StringTag) o).value);
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + Objects.hashCode(value);
+    }
 }

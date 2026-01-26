@@ -69,4 +69,9 @@ public class FloatTag extends Tag {
     public boolean equals(Object o) {
         return super.equals(o) && Float.compare(value, ((FloatTag) o).value) == 0;
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + Float.hashCode(value);
+    }
 }

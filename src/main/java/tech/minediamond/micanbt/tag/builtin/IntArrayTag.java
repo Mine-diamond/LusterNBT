@@ -109,4 +109,9 @@ public class IntArrayTag extends Tag {
     public boolean equals(Object o) {
         return super.equals(o) && Arrays.equals(value, ((IntArrayTag) o).value);
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + Arrays.hashCode(value);
+    }
 }

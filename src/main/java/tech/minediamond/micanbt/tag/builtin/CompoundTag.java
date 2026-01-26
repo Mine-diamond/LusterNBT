@@ -184,4 +184,9 @@ public class CompoundTag extends Tag implements Iterable<Tag> {
     public boolean equals(Object o) {
         return super.equals(o) && value.equals(((CompoundTag) o).value);
     }
+
+    @Override
+    public int hashCode() {
+        return 31 * super.hashCode() + Objects.hashCode(value);
+    }
 }

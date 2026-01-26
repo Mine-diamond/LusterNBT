@@ -76,6 +76,11 @@ public abstract class Tag {
     }
 
     @Override
+    public int hashCode() {
+        return this.name.hashCode();
+    }
+
+    @Override
     public String toString() {
         String name = this.getName() != null && !this.getName().equals("") ? "(" + this.getName() + ")" : "";
         String value = "";
