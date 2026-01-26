@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A tag containing a list of tags.
@@ -201,6 +202,8 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
 
     @Override
     public int hashCode() {
-        return 31 * super.hashCode() + this.typeId + this.value.hashCode();
+        int result = 31 * super.hashCode() + typeId;
+        result = 31 * result + Objects.hashCode(value);
+        return result;
     }
 }
