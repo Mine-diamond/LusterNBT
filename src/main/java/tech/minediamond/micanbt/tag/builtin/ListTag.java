@@ -202,8 +202,6 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
 
     @Override
     public int hashCode() {
-        int result = 31 * super.hashCode() + typeId;
-        result = 31 * result + Objects.hashCode(value);
-        return result;
+        return Objects.hash(super.hashCode(), typeId, value);
     }
 }
