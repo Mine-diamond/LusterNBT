@@ -100,7 +100,7 @@ public class IntArrayTag extends Tag {
     }
 
     @Override
-    public IntArrayTag clone() {
+    public IntArrayTag copy() {
         return new IntArrayTag(this.getName(), this.getValue());
     }
 }

@@ -61,7 +61,7 @@ public class StringTag extends Tag {
     }
 
     @Override
-    public StringTag clone() {
+    public StringTag copy() {
         return new StringTag(this.getName(), this.getValue());
     }
 }

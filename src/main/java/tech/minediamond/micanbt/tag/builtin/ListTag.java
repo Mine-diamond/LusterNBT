@@ -181,11 +181,11 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
     }
 
     @Override
-    @SuppressWarnings("unchecked") // Safe cast: tag.clone() returns a Tag of the same concrete type
-    public ListTag<T> clone() {
+    @SuppressWarnings("unchecked") // Safe cast: tag.copy() returns a Tag of the same concrete type
+    public ListTag<T> copy() {
         ListTag<T> copy = new ListTag<>(this.getName(), this.typeId);
         for (T tag : this.value) {
-            copy.add((T) tag.clone());
+            copy.add((T) tag.copy());
         }
         return copy;
     }

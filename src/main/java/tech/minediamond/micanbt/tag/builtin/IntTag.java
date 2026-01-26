@@ -61,7 +61,7 @@ public class IntTag extends Tag {
     }
 
     @Override
-    public IntTag clone() {
+    public IntTag copy() {
         return new IntTag(this.getName(), this.getValue());
     }
 }

@@ -61,7 +61,7 @@ public class ByteTag extends Tag {
     }
 
     @Override
-    public ByteTag clone() {
+    public ByteTag copy() {
         return new ByteTag(this.getName(), this.getValue());
     }
 }
