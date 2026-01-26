@@ -61,7 +61,7 @@ public class ShortTag extends Tag {
     }
 
     @Override
-    public ShortTag clone() {
+    public ShortTag copy() {
         return new ShortTag(this.getName(), this.getValue());
     }
 }

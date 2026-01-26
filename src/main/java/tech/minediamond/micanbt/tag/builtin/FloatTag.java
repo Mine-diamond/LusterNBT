@@ -61,7 +61,7 @@ public class FloatTag extends Tag {
     }
 
     @Override
-    public FloatTag clone() {
+    public FloatTag copy() {
         return new FloatTag(this.getName(), this.getValue());
     }
 }

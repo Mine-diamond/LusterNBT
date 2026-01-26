@@ -61,7 +61,7 @@ public class DoubleTag extends Tag {
     }
 
     @Override
-    public DoubleTag clone() {
+    public DoubleTag copy() {
         return new DoubleTag(this.getName(), this.getValue());
     }
 }

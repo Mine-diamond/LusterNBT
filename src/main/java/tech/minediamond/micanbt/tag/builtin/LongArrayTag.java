@@ -100,7 +100,7 @@ public class LongArrayTag extends Tag {
     }
 
     @Override
-    public LongArrayTag clone() {
+    public LongArrayTag copy() {
         return new LongArrayTag(this.getName(), this.getValue());
     }
 }

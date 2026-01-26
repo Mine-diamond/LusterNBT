@@ -1,7 +1,7 @@
 package tech.minediamond.micanbt.tag.builtin;
 
-import tech.minediamond.micanbt.SNBT.SNBTStyle;
 import tech.minediamond.micanbt.SNBT.SNBT;
+import tech.minediamond.micanbt.SNBT.SNBTStyle;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -14,7 +14,7 @@ import java.lang.reflect.Array;
  * All tags must have a constructor with a single string parameter for reading tags (can be any visibility).
  * Tags should also have setter methods specific to their value types.
  */
-public abstract class Tag implements Cloneable {
+public abstract class Tag {
     private final String name;
 
     /**
@@ -60,8 +60,12 @@ public abstract class Tag implements Cloneable {
      */
     public abstract void write(DataOutput out) throws IOException;
 
-    @Override
-    public abstract Tag clone();
+    /**
+     * Creates and returns a copy of this tag.
+     *
+     * @return a new tag with the same content.
+     */
+    public abstract Tag copy();
 
     @Override
     public boolean equals(Object obj) {

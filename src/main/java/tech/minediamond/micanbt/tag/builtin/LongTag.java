@@ -61,7 +61,7 @@ public class LongTag extends Tag {
     }
 
     @Override
-    public LongTag clone() {
+    public LongTag copy() {
         return new LongTag(this.getName(), this.getValue());
     }
 }
