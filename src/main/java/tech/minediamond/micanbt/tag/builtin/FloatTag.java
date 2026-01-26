@@ -64,4 +64,12 @@ public class FloatTag extends Tag {
     public FloatTag copy() {
         return new FloatTag(this.getName(), this.getValue());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FloatTag floatTag = (FloatTag) o;
+        return value == floatTag.value;
+    }
 }

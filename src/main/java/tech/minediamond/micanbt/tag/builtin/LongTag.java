@@ -64,4 +64,12 @@ public class LongTag extends Tag {
     public LongTag copy() {
         return new LongTag(this.getName(), this.getValue());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LongTag longTag = (LongTag) o;
+        return value == longTag.value;
+    }
 }

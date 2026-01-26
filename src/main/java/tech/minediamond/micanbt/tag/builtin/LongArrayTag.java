@@ -3,6 +3,7 @@ package tech.minediamond.micanbt.tag.builtin;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * A tag containing a long array.
@@ -102,5 +103,13 @@ public class LongArrayTag extends Tag {
     @Override
     public LongArrayTag copy() {
         return new LongArrayTag(this.getName(), this.getValue());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LongArrayTag longArrayTag = (LongArrayTag) o;
+        return Arrays.equals(value, longArrayTag.value);
     }
 }

@@ -69,11 +69,7 @@ public abstract class Tag {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof Tag tag)) {
-            return false;
-        }
-
-        if (!this.getName().equals(tag.getName())) {
+        if (!(obj instanceof Tag tag) || !this.getName().equals(tag.getName())) {
             return false;
         }
 

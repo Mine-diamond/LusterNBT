@@ -189,4 +189,13 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
         }
         return copy;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ListTag<?> listTag = (ListTag<?>) o;
+        if (this.typeId != listTag.typeId) return false;
+        return this.value.equals(listTag.value);
+    }
 }

@@ -64,4 +64,12 @@ public class ShortTag extends Tag {
     public ShortTag copy() {
         return new ShortTag(this.getName(), this.getValue());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ShortTag shortTag = (ShortTag) o;
+        return value == shortTag.value;
+    }
 }

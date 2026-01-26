@@ -3,6 +3,7 @@ package tech.minediamond.micanbt.tag.builtin;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * A tag containing a string.
@@ -63,5 +64,13 @@ public class StringTag extends Tag {
     @Override
     public StringTag copy() {
         return new StringTag(this.getName(), this.getValue());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        StringTag stringTag = (StringTag) o;
+        return Objects.equals(value, stringTag.value);
     }
 }
