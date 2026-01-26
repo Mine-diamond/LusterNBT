@@ -6,7 +6,6 @@ import tech.minediamond.micanbt.SNBT.SNBTStyle;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.Array;
 
 /**
  * Represents an NBT tag.
@@ -101,6 +100,6 @@ public abstract class Tag {
      * @see SNBTStyle
      */
     public String toString(boolean stringifyRootTagName, SNBTStyle snbtStyle) {
-        return SNBT.serialize(this, stringifyRootTagName, snbtStyle);
+        return SNBT.stringify(this, stringifyRootTagName, snbtStyle);
     }
 }
