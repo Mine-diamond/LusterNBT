@@ -20,13 +20,16 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jdk.version>17</jdk.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.release>17</maven.compiler.release>
+        <skipTests>true</skipTests> <!-- Haven't written the tests yet -->
+        <argLine></argLine>
     </properties>
 
     <licenses>
         <license>
             <name>MIT</name>
-            <url>http://www.opensource.org/licenses/mit-license.html</url>
+            <url>https://www.opensource.org/licenses/mit-license.html</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -35,7 +38,9 @@
         <developer>
             <id>Mine-diamond</id>
             <name>Mine-diamond</name>
-            <email>mine_yaoym@outlook.com</email>
+            <roles>
+                <role>Maintainer</role>
+            </roles>
         </developer>
         <developer>
             <id>steveice10</id>
@@ -48,22 +53,21 @@
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/Mine-diamond/LusterNBT/issues</url>
+        <url>https://github.com/Mine-diamond/MicaNBT/issues</url>
     </issueManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
     <build>
         <defaultGoal>clean install</defaultGoal>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-clean-plugin</artifactId>
-                <version>3.5.0</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.4.0</version>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -72,19 +76,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.13.0</version>
                 <configuration>
-                    <source>${jdk.version}</source>
-                    <target>${jdk.version}</target>
+                    <parameters>true</parameters>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>3.5.3</version>
                 <configuration>
-                    <!-- No tests in this project atm -->
-                    <skip>true</skip>
+                    <skipTests>${skipTests}</skipTests>
                     <!-- Force the right file encoding during unit testing -->
                     <argLine>-Dfile.encoding=${project.build.sourceEncoding} @{argLine}</argLine>
                 </configuration>
@@ -104,7 +106,8 @@
                 </executions>
                 <configuration>
                     <show>public</show>
-                    <failOnError>false</failOnError>
+                    <release>17</release>
+                    <failOnError>true</failOnError>
                 </configuration>
             </plugin>
             <plugin>
@@ -122,13 +125,8 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <version>3.1.4</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.2.7</version>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
@@ -142,12 +140,12 @@
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.4.0</version>
+                <version>0.9.0</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <publishingServerId>central</publishingServerId> <!-- 对应 settings.xml 中的 id -->
-                    <tokenAuth>true</tokenAuth>
-                    <autoPublish>false</autoPublish> <!-- 设置为 true 会在校验通过后自动发布 -->
+                    <publishingServerId>central</publishingServerId> <!-- id in settings.xml -->
+                    <autoPublish>false</autoPublish> <!-- Set to true to automatically publish after validation passes -->
+                    <deploymentName>${project.groupId}:${project.artifactId}:${project.version}</deploymentName>
                 </configuration>
             </plugin>
         </plugins>
