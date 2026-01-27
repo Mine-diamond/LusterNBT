@@ -56,6 +56,11 @@
         <url>https://github.com/Mine-diamond/MicaNBT/issues</url>
     </issueManagement>
 
+    <ciManagement>
+        <system>GitHub Actions</system>
+        <url>https://github.com/Mine-diamond/MicaNBT/actions</url>
+    </ciManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
