@@ -186,8 +186,8 @@ public class SNBTReader {
     // This implementation has a flaw:
     // if there is not a `,` between elements, and the parsing of sub-elements is correct,
     // it can still parse successfully, such as in [{str1:"str"}{str2:"str"}]
-    private ListTag parseList(String name) {
-        ListTag listTag = new ListTag(name);
+    private ListTag<? extends Tag> parseList(String name) {
+        ListTag<Tag> listTag = new ListTag<>(name);
         snbtBuffer.skip(); //`[`
         if (snbtBuffer.peek() == Tokens.ARRAY_END) {
             snbtBuffer.skip(); // `]`
