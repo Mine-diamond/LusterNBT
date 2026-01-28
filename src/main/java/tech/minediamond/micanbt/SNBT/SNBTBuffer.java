@@ -25,6 +25,12 @@ class SNBTBuffer {
         return charBuffer.get(target);
     }
 
+    public boolean peekOrConsume(char c) {
+        if (peek() != c) return false;
+        consume();
+        return true;
+    }
+
     public char consume() {
         return charBuffer.get();
     }

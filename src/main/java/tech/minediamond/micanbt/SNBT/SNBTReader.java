@@ -79,8 +79,7 @@ public class SNBTReader {
     private Tag parseCompound(String name) {
         CompoundTag compoundTag = new CompoundTag(name);
         snbtBuffer.skip(); // `{`
-        if (snbtBuffer.peek() == Tokens.COMPOUND_END) {
-            snbtBuffer.skip(); // `}`
+        if (snbtBuffer.peekOrConsume(Tokens.COMPOUND_END)) { // `}`
             return compoundTag;
         }
 
@@ -112,8 +111,7 @@ public class SNBTReader {
         ByteArrayTag byteArrayTag = new ByteArrayTag(name);
         snbtBuffer.skip(3); // `[B;`
         snbtBuffer.skipEmptyChar(); // skip any possible empty char
-        if (snbtBuffer.peek() == Tokens.ARRAY_END) {
-            snbtBuffer.skip(); // `]`
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return byteArrayTag;
         }
         ArrayList<Byte> bytes = new ArrayList<>();
@@ -137,8 +135,7 @@ public class SNBTReader {
         IntArrayTag intArrayTag = new IntArrayTag(name);
         snbtBuffer.skip(3); // `[I;`
         snbtBuffer.skipEmptyChar(); // skip any possible empty char
-        if (snbtBuffer.peek() == Tokens.ARRAY_END) {
-            snbtBuffer.skip(); // `]`
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return intArrayTag;
         }
         ArrayList<Integer> integers = new ArrayList<>();
@@ -161,8 +158,7 @@ public class SNBTReader {
     private LongArrayTag parseLongArray(String name) {
         LongArrayTag longArrayTag = new LongArrayTag(name);
         snbtBuffer.skip(3); // `[L;`
-        if (snbtBuffer.peek() == Tokens.ARRAY_END) {
-            snbtBuffer.skip(); // `]`
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return longArrayTag;
         }
         ArrayList<Long> longs = new ArrayList<>();
@@ -188,8 +184,7 @@ public class SNBTReader {
     private ListTag<? extends Tag> parseList(String name) {
         ListTag<Tag> listTag = new ListTag<>(name);
         snbtBuffer.skip(); //`[`
-        if (snbtBuffer.peek() == Tokens.ARRAY_END) {
-            snbtBuffer.skip(); // `]`
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return listTag;
         }
         while (snbtBuffer.peek() != Tokens.ARRAY_END) {
@@ -214,8 +209,7 @@ public class SNBTReader {
             return new StringTag(name, value);
         }
 
-        char lastChar = value.charAt(value.length() - 1);
-        char suffix = Character.toLowerCase(lastChar);
+        char suffix = Character.toLowerCase(value.charAt(value.length() - 1));
 
         boolean isSignedDefault = true;
         boolean isSigned = false;
