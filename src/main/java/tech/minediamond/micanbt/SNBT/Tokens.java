@@ -4,6 +4,9 @@ final class Tokens {
     private Tokens() {
     }
 
+    // Constraints
+    static final int MAX_NESTING_DEPTH = 512;
+
     // Structural Delimiters
     static final char COMPOUND_BEGIN = '{';
     static final char COMPOUND_END = '}';

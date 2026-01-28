@@ -13,6 +13,7 @@ public class SNBTReader {
     private final SNBTBuffer snbtBuffer;
     private final Tag tag;
 
+    private int depth = 0;
     private final StringBuilder reusableBuilder = new StringBuilder();
 
     public SNBTReader(String SNBTText) {
@@ -79,6 +80,10 @@ public class SNBTReader {
     // if there is not a `,` between elements, and the parsing of sub-elements is correct,
     // it can still parse successfully, such as in {subCompoundTag: {}str:"str"}
     private Tag parseCompound(String name) {
+        depth++;
+        if (depth > Tokens.MAX_NESTING_DEPTH) {
+            throw new SNBTParseException("max nesting depth exceeded");
+        }
         CompoundTag compoundTag = new CompoundTag(name);
         snbtBuffer.skip(); // `{`
         if (snbtBuffer.peekOrConsume(Tokens.COMPOUND_END)) { // `}`
@@ -97,6 +102,7 @@ public class SNBTReader {
         }
 
         snbtBuffer.skip(); // `}`
+        depth--;
         return compoundTag;
     }
 
@@ -172,6 +178,10 @@ public class SNBTReader {
     // if there is not a `,` between elements, and the parsing of sub-elements is correct,
     // it can still parse successfully, such as in [{str1:"str"}{str2:"str"}]
     private ListTag<? extends Tag> parseList(String name) {
+        depth++;
+        if (depth > Tokens.MAX_NESTING_DEPTH) {
+            throw new SNBTParseException("max nesting depth exceeded");
+        }
         ListTag<Tag> listTag = new ListTag<>(name);
         snbtBuffer.skip(); //`[`
         if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
@@ -185,6 +195,7 @@ public class SNBTReader {
             snbtBuffer.skipEmptyChar(); // skip empty char after `,` or something possible
         }
         snbtBuffer.skip(); // `]`
+        depth--;
         return listTag;
     }
 
