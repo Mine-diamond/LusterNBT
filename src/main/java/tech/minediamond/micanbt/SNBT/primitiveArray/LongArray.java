@@ -14,7 +14,6 @@ public class LongArray {
 
     public void add(long value) {
         if (size >= data.length) {
-            // 扩容 1.5 倍
             data = Arrays.copyOf(data, size + (size >> 1));
         }
         data[size++] = value;
