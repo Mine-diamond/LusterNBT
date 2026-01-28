@@ -38,10 +38,6 @@ public class LongArray {
         size = 0;
     }
 
-    public long[] elements() {
-        return data.clone();
-    }
-
     public long[] toArray() {
         return Arrays.copyOf(data, size);
     }

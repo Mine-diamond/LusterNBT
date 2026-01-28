@@ -20,12 +20,12 @@ public class IntArray {
     }
 
     public int get(int index) {
-        if (index >= size) throw new IndexOutOfBoundsException();
+        if (index >= size || index < 0) throw new IndexOutOfBoundsException();
         return data[index];
     }
 
     public void set(int index, int value) {
-        if (index >= size) throw new IndexOutOfBoundsException();
+        if (index >= size || index < 0) throw new IndexOutOfBoundsException();
         data[index] = value;
     }
 
@@ -36,10 +36,6 @@ public class IntArray {
     public void clear() {
         data = new int[INITIAL_CAPACITY];
         size = 0;
-    }
-
-    public int[] elements() {
-        return data.clone();
     }
 
     public int[] toArray() {

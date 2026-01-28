@@ -38,10 +38,6 @@ public class ByteArray {
         size = 0;
     }
 
-    public byte[] elements() {
-        return data.clone();
-    }
-
     public byte[] toArray() {
         return Arrays.copyOf(data, size);
     }
