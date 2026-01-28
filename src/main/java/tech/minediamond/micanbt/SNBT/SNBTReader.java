@@ -208,7 +208,7 @@ public class SNBTReader {
         int suffixNum = 1;
 
         try {
-            if (value.startsWith(Tokens.DECIMAL_PREFIX) || value.startsWith(Tokens.DECIMAL_PREFIX_UPPER)) {
+            if (value.startsWith(Tokens.HEX_PREFIX) || value.startsWith(Tokens.HEX_PREFIX_UPPER)) {
                 prefixNum = 2;
                 radix = 16;
             }
