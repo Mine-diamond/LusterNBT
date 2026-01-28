@@ -47,16 +47,50 @@ final class Tokens {
     static final char TAB = '\t';
     static final char EOF = '\0';
 
+    private static final boolean[] ALLOWED_CHARS = new boolean[128];
+
+    private static final byte[] CHAR_FLAGS = new byte[128];
+
+    private static final int FLAG_IS_DIGIT_EXT = 1;  // 0-9, -, .
+    private static final int FLAG_MAY_NUMBER = 2;   // 0-9, -, ., e, E, +
+
+    private static final long FORMAT_CHARS_MASK = (1L << 0) | // EOF (\0)
+            (1L << 9) | // TAB (\t)
+            (1L << 10) | // LF (\n)
+            (1L << 13) | // CR (\r)
+            (1L << 32);  // SPACE ( )
+
+    static {
+        for (char c = 'a'; c <= 'z'; c++) ALLOWED_CHARS[c] = true;
+        for (char c = 'A'; c <= 'Z'; c++) ALLOWED_CHARS[c] = true;
+        for (char c = '0'; c <= '9'; c++) ALLOWED_CHARS[c] = true;
+        ALLOWED_CHARS['-'] = true;
+        ALLOWED_CHARS['_'] = true;
+        ALLOWED_CHARS['.'] = true;
+        ALLOWED_CHARS['+'] = true;
+
+        for (char c = '0'; c <= '9'; c++) {
+            CHAR_FLAGS[c] |= FLAG_IS_DIGIT_EXT | FLAG_MAY_NUMBER;
+        }
+
+        CHAR_FLAGS['-'] |= FLAG_IS_DIGIT_EXT | FLAG_MAY_NUMBER;
+        CHAR_FLAGS['.'] |= FLAG_IS_DIGIT_EXT | FLAG_MAY_NUMBER;
+        CHAR_FLAGS['+'] |= FLAG_MAY_NUMBER;
+        CHAR_FLAGS['e'] |= FLAG_MAY_NUMBER;
+        CHAR_FLAGS['E'] |= FLAG_MAY_NUMBER;
+    }
+
     static boolean isAllowedInUnquotedString(final char c) {
-        return (c >= 'a' && c <= 'z')
-                || (c >= 'A' && c <= 'Z')
-                || (c >= '0' && c <= '9')
-                || c == '-' || c == '_'
-                || c == '.' || c == '+';
+        return c < 128 && ALLOWED_CHARS[c];
     }
 
     static boolean needQuotation(String s) {
-        for (char c : s.toCharArray()) {
+        if (s == null || s.isEmpty()) {
+            return true;
+        }
+        int len = s.length();
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
             if (!isAllowedInUnquotedString(c)) {
                 return true;
             }
@@ -65,13 +99,17 @@ final class Tokens {
     }
 
     static boolean isDigit(final char c) {
-        return (c >= '0' && c <= '9') || c == '-' || c == '.';
+        return c < 128 && (CHAR_FLAGS[c] & FLAG_IS_DIGIT_EXT) != 0;
     }
 
     static boolean mayNumber(String s) {
         if (s == null || s.isEmpty()) return false;
-        for (char c : s.toCharArray()) {
-            if (!isDigit(c) && c != '.' && c != '-' && c != 'e' && c != '+') {
+
+        int len = s.length();
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
+
+            if (c >= 128 || (CHAR_FLAGS[c] & FLAG_MAY_NUMBER) == 0) {
                 return false;
             }
         }
@@ -79,22 +117,6 @@ final class Tokens {
     }
 
     static boolean isFormatChar(final char c) {
-        return c == TAB || c == SPACE || c == CARRIAGE_RETURN || c == NEWLINE || c == EOF;
-    }
-
-    /**
-     * Return whether a character is a numeric type identifier.
-     *
-     * @param c character to check
-     * @return if a numeric type identifier
-     */
-    static boolean numericType(char c) {
-        c = Character.toLowerCase(c);
-        return c == TYPE_BYTE || c == TYPE_BYTE_UPPER
-                || c == TYPE_SHORT || c == TYPE_SHORT_UPPER
-                || c == TYPE_INT || c == TYPE_INT_UPPER
-                || c == TYPE_LONG || c == TYPE_LONG_UPPER
-                || c == TYPE_FLOAT || c == TYPE_FLOAT_UPPER
-                || c == TYPE_DOUBLE || c == TYPE_DOUBLE_UPPER;
+        return c <= 32 && (FORMAT_CHARS_MASK & (1L << c)) != 0;
     }
 }

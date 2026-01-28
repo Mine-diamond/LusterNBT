@@ -8,7 +8,6 @@ import tech.minediamond.micanbt.tag.builtin.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 
 public class SNBTReader {
     private final SNBTBuffer snbtBuffer;
@@ -265,7 +264,8 @@ public class SNBTReader {
         return switch (suffix) {
             case Tokens.TYPE_BYTE -> new ByteTag(name, Byte.parseByte(numPart, radix));
             case Tokens.TYPE_SHORT -> new ShortTag(name, Short.parseShort(numPart, radix));
-            case Tokens.TYPE_INT, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> new IntTag(name, Integer.parseInt(numPart, radix));
+            case Tokens.TYPE_INT, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ->
+                    new IntTag(name, Integer.parseInt(numPart, radix));
             case Tokens.TYPE_LONG -> new LongTag(name, Long.parseLong(numPart, radix));
             case Tokens.TYPE_FLOAT -> new FloatTag(name, Float.parseFloat(numPart));
             case Tokens.TYPE_DOUBLE -> new DoubleTag(name, Double.parseDouble(numPart));
