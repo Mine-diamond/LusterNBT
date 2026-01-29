@@ -1,4 +1,4 @@
-package tech.minediamond.micanbt;
+package tech.minediamond.micanbt.NBT;
 
 import tech.minediamond.micanbt.tag.TagCreateException;
 import tech.minediamond.micanbt.tag.TagFactory;
@@ -18,6 +18,8 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -25,65 +27,36 @@ import java.util.zip.GZIPOutputStream;
  * A class containing methods for reading/writing NBT tags.
  */
 public class NBTIO {
-    /**
-     * Reads the compressed, big endian root CompoundTag from the given file.
-     *
-     * @param path Path of the file.
-     * @return The read compound tag.
-     * @throws java.io.IOException If an I/O error occurs.
-     */
-    public static CompoundTag readFile(String path) throws IOException {
-        return readFile(new File(path));
-    }
 
     /**
      * Reads the compressed, big endian root CompoundTag from the given file.
      *
-     * @param file File to read from.
+     * @param path File to read from.
      * @return The read compound tag.
      * @throws java.io.IOException If an I/O error occurs.
      */
-    public static CompoundTag readFile(File file) throws IOException {
-        return readFile(file, true, false);
+    public static CompoundTag read(Path path) throws IOException {
+        return read(path, true, false);
     }
 
     /**
      * Reads the root CompoundTag from the given file.
      *
-     * @param path         Path of the file.
+     * @param path         File to read from.
      * @param compressed   Whether the NBT file is compressed.
      * @param littleEndian Whether the NBT file is little endian.
      * @return The read compound tag.
      * @throws java.io.IOException If an I/O error occurs.
      */
-    public static CompoundTag readFile(String path, boolean compressed, boolean littleEndian) throws IOException {
-        return readFile(new File(path), compressed, littleEndian);
-    }
-
-    /**
-     * Reads the root CompoundTag from the given file.
-     *
-     * @param file         File to read from.
-     * @param compressed   Whether the NBT file is compressed.
-     * @param littleEndian Whether the NBT file is little endian.
-     * @return The read compound tag.
-     * @throws java.io.IOException If an I/O error occurs.
-     */
-    public static CompoundTag readFile(File file, boolean compressed, boolean littleEndian) throws IOException {
-        InputStream in = new FileInputStream(file);
-        try {
-            if (compressed) {
-                in = new GZIPInputStream(in);
-            }
-
+    public static CompoundTag read(Path path, boolean compressed, boolean littleEndian) throws IOException {
+        try (InputStream fis = Files.newInputStream(path);
+             InputStream in = compressed ? new GZIPInputStream(fis) : fis) {
             Tag tag = readTag(in, littleEndian);
-            if (!(tag instanceof CompoundTag)) {
+            if (!(tag instanceof CompoundTag compoundTag)) {
                 throw new IOException("Root tag is not a CompoundTag!");
             }
 
-            return (CompoundTag) tag;
-        } finally {
-            in.close();
+            return compoundTag;
         }
     }
 
@@ -91,64 +64,31 @@ public class NBTIO {
      * Writes the given root CompoundTag to the given file, compressed and in big endian.
      *
      * @param tag  Tag to write.
-     * @param path Path to write to.
+     * @param path File to write to.
      * @throws java.io.IOException If an I/O error occurs.
      */
-    public static void writeFile(CompoundTag tag, String path) throws IOException {
-        writeFile(tag, new File(path));
-    }
-
-    /**
-     * Writes the given root CompoundTag to the given file, compressed and in big endian.
-     *
-     * @param tag  Tag to write.
-     * @param file File to write to.
-     * @throws java.io.IOException If an I/O error occurs.
-     */
-    public static void writeFile(CompoundTag tag, File file) throws IOException {
-        writeFile(tag, file, true, false);
+    public static void writeFile(CompoundTag tag, Path path) throws IOException {
+        writeFile(tag, path, true, false);
     }
 
     /**
      * Writes the given root CompoundTag to the given file.
      *
      * @param tag          Tag to write.
-     * @param path         Path to write to.
+     * @param path         File to write to.
      * @param compressed   Whether the NBT file should be compressed.
      * @param littleEndian Whether to write little endian NBT.
      * @throws java.io.IOException If an I/O error occurs.
      */
-    public static void writeFile(CompoundTag tag, String path, boolean compressed, boolean littleEndian) throws IOException {
-        writeFile(tag, new File(path), compressed, littleEndian);
-    }
-
-    /**
-     * Writes the given root CompoundTag to the given file.
-     *
-     * @param tag          Tag to write.
-     * @param file         File to write to.
-     * @param compressed   Whether the NBT file should be compressed.
-     * @param littleEndian Whether to write little endian NBT.
-     * @throws java.io.IOException If an I/O error occurs.
-     */
-    public static void writeFile(CompoundTag tag, File file, boolean compressed, boolean littleEndian) throws IOException {
-        if(!file.exists()) {
-            if(file.getParentFile() != null && !file.getParentFile().exists()) {
-                file.getParentFile().mkdirs();
-            }
-
-            file.createNewFile();
+    public static void writeFile(CompoundTag tag, Path path, boolean compressed, boolean littleEndian) throws IOException {
+        Path parent = path.getParent();
+        if (parent != null && Files.notExists(parent)) {
+            Files.createDirectories(parent);
         }
 
-        OutputStream out = new FileOutputStream(file);
-        try {
-            if (compressed) {
-                out = new GZIPOutputStream(out);
-            }
-
+        try (OutputStream fos = Files.newOutputStream(path);
+             OutputStream out = compressed ? new GZIPOutputStream(fos) : fos) {
             writeTag(out, tag, littleEndian);
-        } finally {
-            out.close();
         }
     }
 

@@ -1,6 +1,6 @@
 package tech.minediamond.micanbt.tag.builtin;
 
-import tech.minediamond.micanbt.NBTIO;
+import tech.minediamond.micanbt.NBT.NBTIO;
 
 import java.io.DataInput;
 import java.io.DataOutput;
