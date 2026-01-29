@@ -1,35 +1,36 @@
 package tech.minediamond.micanbt.SNBT;
 
+import tech.minediamond.micanbt.SNBT.primitiveArray.ByteArray;
+import tech.minediamond.micanbt.SNBT.primitiveArray.IntArray;
+import tech.minediamond.micanbt.SNBT.primitiveArray.LongArray;
 import tech.minediamond.micanbt.tag.builtin.*;
 
 import java.io.IOException;
-import java.nio.BufferUnderflowException;
-import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 
 public class SNBTReader {
-    private final CharBuffer charBuffer;
+    private final SNBTBuffer snbtBuffer;
     private final Tag tag;
 
+    private int depth = 0;
     private final StringBuilder reusableBuilder = new StringBuilder();
 
     public SNBTReader(String SNBTText) {
-        this.charBuffer = CharBuffer.wrap(SNBTText);
+        this.snbtBuffer = new SNBTBuffer(SNBTText);
         try {
             tag = readRoot();
         } catch (Exception e) {
-            throw new SNBTParseException(getSNBTParseExceptionText(), e);
+            throw new SNBTParseException(snbtBuffer.getErrorContext(), e);
         }
     }
 
     public SNBTReader(Path path) throws IOException {
-        this.charBuffer = CharBuffer.wrap(Files.readString(path));
+        this.snbtBuffer = new SNBTBuffer(Files.readString(path));
         try {
             tag = readRoot();
         } catch (Exception e) {
-            throw new SNBTParseException(getSNBTParseExceptionText(), e);
+            throw new SNBTParseException(snbtBuffer.getErrorContext(), e);
         }
     }
 
@@ -37,58 +38,26 @@ public class SNBTReader {
         return tag;
     }
 
-    private static String fromStartToPosition(CharBuffer buf) { // for debug use
-        int pos = buf.position();
-        CharBuffer view = buf.duplicate();
-        view.position(0);
-        view.limit(pos);
-        return view.toString();
-    }
-
-    private void printlnFromStartToPosition(String msg) { // for debug use
-        System.out.println("custom message: " + msg + "\ncurrent processed: " + fromStartToPosition(charBuffer));
-    }
-
-    private void printlnFromStartToPosition() { // for debug use
-        System.out.println("current processed: " + fromStartToPosition(charBuffer));
-    }
-
-    private String getSNBTParseExceptionText() {
-        int pos = charBuffer.position();
-        CharBuffer view = charBuffer.duplicate();
-        view.position(0);
-        if (charBuffer.hasRemaining()) {
-            view.limit(pos + 1);
-        } else {
-            view.limit(pos);
-        }
-        if (view.length() > 50) {
-            return "Error while parsing SNBTText\n..." + view.subSequence(view.length() - 50, view.length()) + " <- here";
-        } else {
-            return "Error while parsing SNBTText\n" + view.subSequence(0, view.length()) + " <- here";
-        }
-    }
-
     private Tag readRoot() {
-        skipEmptyChar();
-        int pos = charBuffer.position();
-        char first = peek();
+        snbtBuffer.skipEmptyChar();
+        int pos = snbtBuffer.position();
+        char first = snbtBuffer.peek();
         if (first == Tokens.COMPOUND_BEGIN || first == Tokens.ARRAY_BEGIN) {
             return parseTag("");
         }
         String name = parseString();
-        skipEmptyChar();
-        if (!charBuffer.hasRemaining() || peek() != Tokens.COMPOUND_KEY_VALUE_SEPARATOR) {
-            charBuffer.position(pos);
+        snbtBuffer.skipEmptyChar();
+        if (!snbtBuffer.hasRemaining() || snbtBuffer.peek() != Tokens.COMPOUND_KEY_VALUE_SEPARATOR) {
+            snbtBuffer.position(pos);
             return parseTag("");
         }
-        skip(); //`:`
+        snbtBuffer.skip(); //`:`
         return parseTag(name);
     }
 
     private Tag parseTag(String name) {
-        skipEmptyChar();
-        return switch (peek()) {
+        snbtBuffer.skipEmptyChar();
+        return switch (snbtBuffer.peek()) {
             case Tokens.COMPOUND_BEGIN -> parseCompound(name);
             case Tokens.ARRAY_BEGIN -> parseArrayOrList(name);
             default -> parsePrimitive(name);
@@ -96,40 +65,42 @@ public class SNBTReader {
     }
 
     private Tag parseArrayOrList(String name) {
-        if (peek(1) == Tokens.ARRAY_END) {
-            skip(2); // `[]`
-            return new ListTag(name);
+        if (snbtBuffer.peek(1) == Tokens.ARRAY_END) {
+            snbtBuffer.skip(2); // `[]`
+            return new ListTag<>(name);
         }
-        if (peek(2) == Tokens.ARRAY_SIGNATURE_SEPARATOR && "BIL".indexOf(peek(1)) != -1) {
-            return parseTypedArray(peek(1), name);
+        if (snbtBuffer.peek(2) == Tokens.ARRAY_SIGNATURE_SEPARATOR && "BIL".indexOf(snbtBuffer.peek(1)) != -1) {
+            return parseTypedArray(snbtBuffer.peek(1), name);
         } else {
             return parseList(name);
         }
     }
 
-    // This implementation has a flaw:
-    // if there is not a `,` between elements, and the parsing of sub-elements is correct,
-    // it can still parse successfully, such as in {subCompoundTag: {}str:"str"}
     private Tag parseCompound(String name) {
+        depth++;
+        if (depth > Tokens.MAX_NESTING_DEPTH) {
+            throw new SNBTParseException("max nesting depth exceeded");
+        }
         CompoundTag compoundTag = new CompoundTag(name);
-        skip(); // `{`
-        if (peek() == Tokens.COMPOUND_END) {
-            skip(); // `}`
+        snbtBuffer.skipOrThrow(Tokens.COMPOUND_BEGIN); // `{`
+        snbtBuffer.skipEmptyChar();
+        if (snbtBuffer.peekOrConsume(Tokens.COMPOUND_END)) { // `}`
             return compoundTag;
         }
 
-        while (peek() != Tokens.COMPOUND_END) {
+        while (snbtBuffer.peek() != Tokens.COMPOUND_END) {
             String subName = parseString();
-            skipEmptyChar(); // empty char between `"` and `:`
-            skip(); // `:`
+            snbtBuffer.skipEmptyChar(); // empty char between `"` and `:`
+            snbtBuffer.skipOrThrow(Tokens.COMPOUND_KEY_VALUE_SEPARATOR); // `:`
             compoundTag.put(parseTag(subName));
-            if (peek() == Tokens.VALUE_SEPARATOR) {
-                skip(); // `,`
+            if (!snbtBuffer.peekOrConsume(Tokens.VALUE_SEPARATOR)) {// `,`
+                break;
             }
-            skipEmptyChar(); // skip empty char after `,` or something possible
+            snbtBuffer.skipEmptyChar(); // skip empty char after `,` or something possible
         }
-
-        skip(); // `}`
+        snbtBuffer.skipEmptyChar();
+        snbtBuffer.skipOrThrow(Tokens.COMPOUND_END); // `}`
+        depth--;
         return compoundTag;
     }
 
@@ -144,112 +115,102 @@ public class SNBTReader {
 
     private ByteArrayTag parseByteArray(String name) {
         ByteArrayTag byteArrayTag = new ByteArrayTag(name);
-        skip(3); // `[B;`
-        skipEmptyChar(); // skip any possible empty char
-        if (peek() == Tokens.ARRAY_END) {
-            skip(); // `]`
+        snbtBuffer.skip(3); // `[B;`
+        snbtBuffer.skipEmptyChar(); // skip any possible empty char
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return byteArrayTag;
         }
-        ArrayList<Byte> bytes = new ArrayList<>();
-        while (peek() != Tokens.ARRAY_END) {
-            bytes.add((byte) parseArrayNumber(parseUnquotedString(), Byte.MIN_VALUE, Byte.MAX_VALUE, 0, 256, 1));
-            if (peek() == Tokens.VALUE_SEPARATOR) {
-                skip(); // `,`
+        ByteArray byteArray = new ByteArray();
+        while (snbtBuffer.peek() != Tokens.ARRAY_END) {
+            byteArray.add((byte) parseArrayNumber(parseUnquotedString(), Byte.MIN_VALUE, Byte.MAX_VALUE, 0, 255, 1));
+            if (!snbtBuffer.peekOrConsume(Tokens.VALUE_SEPARATOR)) {// `,`
+                break;
             }
-            skipEmptyChar(); // skip empty char after `,` or something possible
+            snbtBuffer.skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        skip(); // `]`
-        byte[] byteArray = new byte[bytes.size()];
-        for (int i = 0; i < bytes.size(); i++) {
-            byteArray[i] = bytes.get(i);
-        }
-        byteArrayTag.setValue(byteArray);
+
+        snbtBuffer.skipOrThrow(Tokens.ARRAY_END); // `]`
+        byteArrayTag.setValue(byteArray.toArray());
         return byteArrayTag;
     }
 
     private IntArrayTag parseIntArray(String name) {
         IntArrayTag intArrayTag = new IntArrayTag(name);
-        skip(3); // `[I;`
-        skipEmptyChar(); // skip any possible empty char
-        if (peek() == Tokens.ARRAY_END) {
-            skip(); // `]`
+        snbtBuffer.skip(3); // `[I;`
+        snbtBuffer.skipEmptyChar(); // skip any possible empty char
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return intArrayTag;
         }
-        ArrayList<Integer> integers = new ArrayList<>();
-        while (peek() != Tokens.ARRAY_END) {
-            integers.add((int) parseArrayNumber(parseUnquotedString(), Integer.MIN_VALUE, Integer.MAX_VALUE, 0, Integer.MAX_VALUE * 2L, 0));
-            if (peek() == Tokens.VALUE_SEPARATOR) {
-                skip(); // `,`
+        IntArray intArray = new IntArray();
+        while (snbtBuffer.peek() != Tokens.ARRAY_END) {
+            intArray.add((int) parseArrayNumber(parseUnquotedString(), Integer.MIN_VALUE, Integer.MAX_VALUE, 0, Integer.MAX_VALUE * 2L + 1, 0));
+            if (!snbtBuffer.peekOrConsume(Tokens.VALUE_SEPARATOR)) {// `,`
+                break;
             }
-            skipEmptyChar(); // skip empty char after `,` or something possible
+            snbtBuffer.skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        skip(); // `]`
-        int[] intArray = new int[integers.size()];
-        for (int i = 0; i < integers.size(); i++) {
-            intArray[i] = integers.get(i);
-        }
-        intArrayTag.setValue(intArray);
+
+        snbtBuffer.skipOrThrow(Tokens.ARRAY_END); // `]`
+        intArrayTag.setValue(intArray.toArray());
         return intArrayTag;
     }
 
     private LongArrayTag parseLongArray(String name) {
         LongArrayTag longArrayTag = new LongArrayTag(name);
-        skip(3); // `[L;`
-        if (peek() == Tokens.ARRAY_END) {
-            skip(); // `]`
+        snbtBuffer.skip(3); // `[L;`
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return longArrayTag;
         }
-        ArrayList<Long> longs = new ArrayList<>();
-        while (peek() != Tokens.ARRAY_END) {
-            longs.add(parseArrayNumber(parseUnquotedString(), Long.MIN_VALUE, Long.MAX_VALUE, 0, Long.MAX_VALUE, 1));
-            if (peek() == Tokens.VALUE_SEPARATOR) {
-                skip(); // `,`
+        LongArray longArray = new LongArray();
+        while (snbtBuffer.peek() != Tokens.ARRAY_END) {
+            longArray.add(parseArrayNumber(parseUnquotedString(), Long.MIN_VALUE, Long.MAX_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, 1));
+            if (!snbtBuffer.peekOrConsume(Tokens.VALUE_SEPARATOR)) {// `,`
+                break;
             }
-            skipEmptyChar(); // skip empty char after `,` or something possible
+            snbtBuffer.skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        skip(); // `]`
-        long[] longArray = new long[longs.size()];
-        for (int i = 0; i < longs.size(); i++) {
-            longArray[i] = longs.get(i);
-        }
-        longArrayTag.setValue(longArray);
+
+        snbtBuffer.skipOrThrow(Tokens.ARRAY_END); // `]`
+        longArrayTag.setValue(longArray.toArray());
         return longArrayTag;
     }
 
-    // This implementation has a flaw:
-    // if there is not a `,` between elements, and the parsing of sub-elements is correct,
-    // it can still parse successfully, such as in [{str1:"str"}{str2:"str"}]
-    private ListTag parseList(String name) {
-        ListTag listTag = new ListTag(name);
-        skip(); //`[`
-        if (peek() == Tokens.ARRAY_END) {
-            skip(); // `]`
+    private ListTag<? extends Tag> parseList(String name) {
+        depth++;
+        if (depth > Tokens.MAX_NESTING_DEPTH) {
+            throw new SNBTParseException("max nesting depth exceeded");
+        }
+        ListTag<Tag> listTag = new ListTag<>(name);
+        snbtBuffer.skip(); //`[`
+        snbtBuffer.skipEmptyChar();
+        if (snbtBuffer.peekOrConsume(Tokens.ARRAY_END)) { // `]`
             return listTag;
         }
-        while (peek() != Tokens.ARRAY_END) {
+        while (snbtBuffer.peek() != Tokens.ARRAY_END) {
             listTag.add(parseTag(""));
-            if (peek() == Tokens.VALUE_SEPARATOR) {
-                skip(); // `,`
+            if (!snbtBuffer.peekOrConsume(Tokens.VALUE_SEPARATOR)) {// `,`
+                break;
             }
-            skipEmptyChar(); // skip empty char after `,` or something possible
+            snbtBuffer.skipEmptyChar(); // skip empty char after `,` or something possible
         }
-        skip(); // `]`
+        snbtBuffer.skipEmptyChar();
+        snbtBuffer.skipOrThrow(Tokens.ARRAY_END); // `]`
+        depth--;
         return listTag;
     }
 
     private Tag parsePrimitive(String name) {
-        skipEmptyChar();
+        snbtBuffer.skipEmptyChar();
 
         String value = parseString();
-        if (value.equalsIgnoreCase("true")) return new ByteTag(name, (byte) 1);
-        if (value.equalsIgnoreCase("false")) return new ByteTag(name, (byte) 0);
+        if (value.equalsIgnoreCase(Tokens.LITERAL_TRUE)) return new ByteTag(name, (byte) 1);
+        if (value.equalsIgnoreCase(Tokens.LITERAL_FALSE)) return new ByteTag(name, (byte) 0);
 
         if (value.isEmpty() || !Tokens.isDigit(value.charAt(0))) {
             return new StringTag(name, value);
         }
 
-        char lastChar = value.charAt(value.length() - 1);
-        char suffix = Character.toLowerCase(lastChar);
+        char suffix = Character.toLowerCase(value.charAt(value.length() - 1));
 
         boolean isSignedDefault = true;
         boolean isSigned = false;
@@ -258,23 +219,23 @@ public class SNBTReader {
         int suffixNum = 1;
 
         try {
-            if (value.startsWith("0x") || value.startsWith("0X")) {
+            if (value.startsWith(Tokens.HEX_PREFIX) || value.startsWith(Tokens.HEX_PREFIX_UPPER)) {
                 prefixNum = 2;
                 radix = 16;
             }
-            if ((value.startsWith("0b") || value.startsWith("0B")) && value.length() >= 4) {
+            if ((value.startsWith(Tokens.BINARY_PREFIX) || value.startsWith(Tokens.BINARY_PREFIX_UPPER)) && value.length() >= 4) {
                 prefixNum = 2;
                 radix = 2;
             }
 
             try {
                 char lastChar2 = value.charAt(value.length() - 2);
-                if (lastChar2 == 'u' || lastChar2 == 'U') {
+                if (lastChar2 == Tokens.TYPE_UNSIGNED || lastChar2 == Tokens.TYPE_UNSIGNED_UPPER) {
                     suffixNum = 2;
                     isSignedDefault = false;
                     isSigned = false;
                 }
-                if (lastChar2 == 's' || lastChar2 == 'S') {
+                if (lastChar2 == Tokens.TYPE_SIGNED || lastChar2 == Tokens.TYPE_SIGNED_UPPER) {
                     suffixNum = 2;
                     isSignedDefault = false;
                     isSigned = true;
@@ -314,11 +275,11 @@ public class SNBTReader {
         return switch (suffix) {
             case Tokens.TYPE_BYTE -> new ByteTag(name, Byte.parseByte(numPart, radix));
             case Tokens.TYPE_SHORT -> new ShortTag(name, Short.parseShort(numPart, radix));
-            case Tokens.TYPE_INT -> new IntTag(name, Integer.parseInt(numPart, radix));
+            case Tokens.TYPE_INT, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ->
+                    new IntTag(name, Integer.parseInt(numPart, radix));
             case Tokens.TYPE_LONG -> new LongTag(name, Long.parseLong(numPart, radix));
             case Tokens.TYPE_FLOAT -> new FloatTag(name, Float.parseFloat(numPart));
             case Tokens.TYPE_DOUBLE -> new DoubleTag(name, Double.parseDouble(numPart));
-            case '0', '1', '2', '3', '4', '5', '6', '7', '8','9' -> new IntTag(name, Integer.parseInt(numPart, radix));
             default -> new StringTag(name, value); // Unquoted string
         };
     }
@@ -337,15 +298,16 @@ public class SNBTReader {
                     throw new NumberFormatException("Value out of range. Value:\"" + value + "\"" + " Radix:" + radix);
                 yield new ShortTag(name, (short) s);
             }
-            case Tokens.TYPE_INT, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> new IntTag(name, Integer.parseUnsignedInt(numPart, radix));
+            case Tokens.TYPE_INT, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ->
+                    new IntTag(name, Integer.parseUnsignedInt(numPart, radix));
             case Tokens.TYPE_LONG -> new LongTag(name, Long.parseUnsignedLong(numPart, radix));
             default -> new StringTag(name, value); // Unquoted string
         };
     }
 
     private String parseString() {
-        skipEmptyChar();
-        char firstChar = peek();
+        snbtBuffer.skipEmptyChar();
+        char firstChar = snbtBuffer.peek();
 
         if (firstChar == Tokens.DOUBLE_QUOTE || firstChar == Tokens.SINGLE_QUOTE) {
             return parseQuotedString();
@@ -355,18 +317,18 @@ public class SNBTReader {
     }
 
     private String parseQuotedString() {
-        skipEmptyChar();
-        char quoteChar = consume(); // `"` or `'`
+        snbtBuffer.skipEmptyChar();
+        char quoteChar = snbtBuffer.consume(); // `"` or `'`
         reusableBuilder.setLength(0);
 
-        while (charBuffer.hasRemaining()) {
-            char c = consume();
+        while (snbtBuffer.hasRemaining()) {
+            char c = snbtBuffer.consume();
 
             if (c == Tokens.ESCAPE_MARKER) {
-                if (!charBuffer.hasRemaining()) {
+                if (!snbtBuffer.hasRemaining()) {
                     throw new RuntimeException("Unexpected end of SNBT: trailing backslash");
                 }
-                char next = consume();
+                char next = snbtBuffer.consume();
 
                 switch (next) {
                     case 'n' -> reusableBuilder.append('\n');
@@ -388,23 +350,22 @@ public class SNBTReader {
     }
 
     private String parseUnquotedString() {
-        skipEmptyChar();
-        reusableBuilder.setLength(0);
-        while (charBuffer.hasRemaining()) {
-            char c = consume();
-            if (Tokens.isAllowedInUnquotedString(c)) {
-                reusableBuilder.append(c);
+        snbtBuffer.skipEmptyChar();
+        int startPos = snbtBuffer.position();
+        int endPos = startPos;
+        while (snbtBuffer.isAvailable(endPos)) {
+            if (Tokens.isAllowedInUnquotedString(snbtBuffer.get(endPos))) {
+                endPos++;
             } else {
-                charBuffer.position(charBuffer.position() - 1);
                 break;
             }
         }
-
-        String result = reusableBuilder.toString();
-        if (result.isEmpty()) {
-            throw new RuntimeException("Expected an unquoted key but found none.");
+        String substring = snbtBuffer.substring(startPos, endPos - startPos);
+        if (substring.isEmpty()) {
+            throw new RuntimeException("Expected an unquoted string but found none.");
         }
-        return result;
+        snbtBuffer.position(endPos);
+        return substring;
     }
 
     private long parseArrayNumber(String value, long min, long max, long unSignedMin, long unSignedMax, int defaultSuffixNum) {
@@ -414,45 +375,47 @@ public class SNBTReader {
         int prefixNum = 0;
         int suffixNum = defaultSuffixNum;
 
-        String lowerValue = value.toLowerCase();
-        if (lowerValue.startsWith("0x")) {
-            prefixNum = 2;
-            radix = 16;
-        } else if (lowerValue.startsWith("0b")) {
-            // Special handling for byte tags as 0b is a valid byte tag
-            if (max > 255 || value.length() > 4) {
-                prefixNum = 2;
-                radix = 2;
-            }
+        if (value == null || value.isEmpty()) {
+            throw new RuntimeException("Expected a non-empty string but found an empty string.");
         }
 
+        char lastChar = value.charAt(value.length() - 1);
         int len = value.length();
-        if (len > 0 && lowerValue.endsWith("i")) { //Special handling for int tags
+        if (lastChar == Tokens.TYPE_INT || lastChar == Tokens.TYPE_INT_UPPER) { //Special handling for int tags
             suffixNum = 1;
         }
 
-        try {
-            if (len >= 2) {
-                char signChar = Character.toLowerCase(value.charAt(len - 2));
-                if (signChar == 'u') {
+        if (len > 2) {
+            if (value.charAt(0) == '0') {
+                char secondChar = value.charAt(1);
+                if (secondChar == 'x' || secondChar == 'X') {
+                    prefixNum = 2;
+                    radix = 16;
+                } else if (secondChar == 'b' || secondChar == 'B') {
+                    prefixNum = 2;
+                    radix = 2;
+                }
+            }
+
+            if (len - 2 >= prefixNum) {
+                char signChar = value.charAt(len - 2);
+                if (signChar == Tokens.TYPE_UNSIGNED || signChar == Tokens.TYPE_UNSIGNED_UPPER) {
                     suffixNum = 2;
                     isSignedDefault = false;
                     isSigned = false;
-                } else if (signChar == 's') {
+                } else if (signChar == Tokens.TYPE_SIGNED || signChar == Tokens.TYPE_SIGNED_UPPER) {
                     suffixNum = 2;
                     isSignedDefault = false;
                     isSigned = true;
                 }
             }
-        } catch (Exception ignored) {
         }
 
         if (isSignedDefault) {
             isSigned = radix != 16 && radix != 2;
         }
 
-        String numPart = value.substring(prefixNum, len - suffixNum);
-        long result = isSigned ? Long.parseLong(numPart, radix) : Long.parseUnsignedLong(numPart, radix);
+        long result = isSigned ? Long.parseLong(value, prefixNum, len - suffixNum, radix) : Long.parseUnsignedLong(value, prefixNum, len - suffixNum, radix);
 
         if (isSigned) {
             if (result < min || result > max) {
@@ -465,40 +428,5 @@ public class SNBTReader {
         }
 
         return result;
-    }
-
-    private char peek() {
-        return charBuffer.get(charBuffer.position());
-    }
-
-    private char peek(int offset) {
-        int target = charBuffer.position() + offset;
-        if (target >= charBuffer.limit()) {
-            throw new BufferUnderflowException();
-        }
-        return charBuffer.get(target);
-    }
-
-    private char consume() {
-        return charBuffer.get();
-    }
-
-    private void skip() {
-        charBuffer.position(charBuffer.position() + 1);
-    }
-
-    private void skip(int n) {
-        charBuffer.position(charBuffer.position() + n);
-    }
-
-    public void skipEmptyChar() {
-        char c;
-        while (charBuffer.hasRemaining()) {
-            c = consume();
-            if (!Tokens.isFormatChar(c)) {
-                charBuffer.position(charBuffer.position() - 1);
-                return;
-            }
-        }
     }
 }
