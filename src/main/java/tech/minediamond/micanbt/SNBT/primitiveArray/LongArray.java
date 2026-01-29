@@ -34,7 +34,6 @@ public class LongArray {
     }
 
     public void clear() {
-        data = new long[INITIAL_CAPACITY];
         size = 0;
     }
 

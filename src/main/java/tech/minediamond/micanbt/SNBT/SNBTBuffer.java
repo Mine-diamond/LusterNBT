@@ -47,8 +47,9 @@ public class SNBTBuffer {
     }
 
     public void skipOrThrow(char c) {
-        if (consume() != c) {
-            throw new SNBTParseException("Expected " + c + " but got " + consume());
+        char actual = consume();
+        if (actual != c) {
+            throw new SNBTParseException("Expected " + c + " but got " + actual);
         }
     }
 

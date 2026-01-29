@@ -34,7 +34,6 @@ public class ByteArray {
     }
 
     public void clear() {
-        data = new byte[INITIAL_CAPACITY];
         size = 0;
     }
 

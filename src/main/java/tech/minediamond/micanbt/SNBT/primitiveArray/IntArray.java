@@ -34,7 +34,6 @@ public class IntArray {
     }
 
     public void clear() {
-        data = new int[INITIAL_CAPACITY];
         size = 0;
     }
 
