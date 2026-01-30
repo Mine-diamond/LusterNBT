@@ -1,7 +1,6 @@
-package tech.minediamond.micanbt.conversion.builtin;
+package tech.minediamond.micanbt.conversion.converter;
 
-import tech.minediamond.micanbt.conversion.TagConverter;
-import tech.minediamond.micanbt.tag.builtin.LongArrayTag;
+import tech.minediamond.micanbt.tag.LongArrayTag;
 
 /**
  * A converter that converts between LongArrayTag and long[].
