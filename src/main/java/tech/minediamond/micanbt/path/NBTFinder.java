@@ -4,7 +4,10 @@ import tech.minediamond.micanbt.tag.CompoundTag;
 import tech.minediamond.micanbt.tag.ListTag;
 import tech.minediamond.micanbt.tag.Tag;
 
-public class NBTFinder {
+public final class NBTFinder {
+
+    private NBTFinder() {
+    }
 
     public static Tag get(Tag root, NBTPath path) {
         if (root == null || path == null) return null;
