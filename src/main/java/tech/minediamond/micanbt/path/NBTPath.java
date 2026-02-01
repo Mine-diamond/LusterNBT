@@ -8,7 +8,6 @@ public class NBTPath {
 
     private NBTPath(String[] tokens) {
         this.tokens = tokens;
-        System.out.println("tokens: " + Arrays.toString(tokens));
     }
 
     public static NBTPath of(String path) {
