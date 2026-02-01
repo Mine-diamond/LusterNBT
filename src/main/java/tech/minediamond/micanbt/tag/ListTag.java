@@ -65,7 +65,7 @@ public class ListTag<T extends Tag> extends Tag implements Iterable<T> {
     @Override
     @SuppressWarnings("unchecked") // Safe cast: tag.copy() returns a Tag of the same concrete type
     public List<T> getClonedValue() {
-        List<T> clonedList = new ArrayList<>(Math.max((int) (this.value.size() / .75f) + 1, 16));
+        List<T> clonedList = new ArrayList<>(Math.max(this.value.size(), 10));
         for (T tag : value) {
             clonedList.add((T) tag.copy());
         }
